@@ -4,18 +4,13 @@ import { REQUIRED_OTA_FIELDS, REQUIRED_GL_FIELDS, ALL_OTA_FIELDS } from '../cons
 import { ArrowLeft, ArrowRight, Table, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface FieldRowProps {
-  field: { key: string, label: string };
+  field: { key: string; label: string };
   value: string;
   options: string[];
   onChange: (val: string) => void;
 }
 
-const FieldRow: React.FC<FieldRowProps> = ({ 
-  field, 
-  value, 
-  options, 
-  onChange 
-}) => {
+const FieldRow: React.FC<FieldRowProps> = ({ field, value, options, onChange }) => {
   const isMapped = !!value;
   return (
     <div className="group relative bg-white rounded-lg border border-slate-200 p-3 hover:border-indigo-300 hover:shadow-sm transition-all duration-200">
@@ -33,12 +28,16 @@ const FieldRow: React.FC<FieldRowProps> = ({
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className={`block w-full rounded-md border-0 py-1.5 pl-3 pr-8 text-sm ring-1 ring-inset focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-colors ${
-          isMapped ? 'text-slate-900 ring-slate-300 bg-slate-50' : 'text-slate-500 ring-amber-200 bg-amber-50'
+          isMapped
+            ? 'text-slate-900 ring-slate-300 bg-slate-50'
+            : 'text-slate-500 ring-amber-200 bg-amber-50'
         }`}
       >
         <option value="">Select header...</option>
-        {options.map(h => (
-          <option key={h} value={h}>{h}</option>
+        {options.map((h) => (
+          <option key={h} value={h}>
+            {h}
+          </option>
         ))}
       </select>
     </div>
@@ -59,29 +58,31 @@ export const StepMap: React.FC<Props> = ({ files, initialMappings, onBack, onNex
   const glHeaders = files.glRaw.length ? Object.keys(files.glRaw[0]) : [];
 
   const handleOtaChange = (key: string, value: string) => {
-    setMappings(prev => ({ ...prev, ota: { ...prev.ota, [key]: value } }));
+    setMappings((prev) => ({ ...prev, ota: { ...prev.ota, [key]: value } }));
   };
 
   const handleGlChange = (key: string, value: string) => {
-    setMappings(prev => ({ ...prev, gl: { ...prev.gl, [key]: value } }));
+    setMappings((prev) => ({ ...prev, gl: { ...prev.gl, [key]: value } }));
   };
 
   const isComplete = () => {
-    const missingOta = REQUIRED_OTA_FIELDS.some(f => !mappings.ota[f.key]);
-    const missingGl = REQUIRED_GL_FIELDS.some(f => !mappings.gl[f.key]);
+    const missingOta = REQUIRED_OTA_FIELDS.some((f) => !mappings.ota[f.key]);
+    const missingGl = REQUIRED_GL_FIELDS.some((f) => !mappings.gl[f.key]);
     return !missingOta && !missingGl;
   };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
         <div className="p-1.5 bg-blue-100 rounded-full text-blue-600 shrink-0">
           <AlertTriangle size={16} />
         </div>
         <div className="text-sm text-blue-800">
           <p className="font-medium">Map your file columns to our internal fields.</p>
-          <p className="opacity-80 mt-1">We've tried to auto-detect matches. Please verify all fields marked with colored indicators.</p>
+          <p className="opacity-80 mt-1">
+            We've tried to auto-detect matches. Please verify all fields marked with colored
+            indicators.
+          </p>
         </div>
       </div>
 
@@ -93,7 +94,9 @@ export const StepMap: React.FC<Props> = ({ files, initialMappings, onBack, onNex
               <Table size={20} />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">OTA File Mapping</h2>
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                OTA File Mapping
+              </h2>
               <p className="text-xs text-slate-500">Booking / Reservation Export</p>
             </div>
             <div className="ml-auto text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600">
@@ -101,8 +104,8 @@ export const StepMap: React.FC<Props> = ({ files, initialMappings, onBack, onNex
             </div>
           </div>
           <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/30 flex-1">
-            {ALL_OTA_FIELDS.map(field => (
-              <FieldRow 
+            {ALL_OTA_FIELDS.map((field) => (
+              <FieldRow
                 key={field.key}
                 field={field}
                 value={mappings.ota[field.key] || ''}
@@ -120,7 +123,9 @@ export const StepMap: React.FC<Props> = ({ files, initialMappings, onBack, onNex
               <Table size={20} />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">GL File Mapping</h2>
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                GL File Mapping
+              </h2>
               <p className="text-xs text-slate-500">Accounting / Bank Export</p>
             </div>
             <div className="ml-auto text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600">
@@ -128,8 +133,8 @@ export const StepMap: React.FC<Props> = ({ files, initialMappings, onBack, onNex
             </div>
           </div>
           <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/30 flex-1">
-            {REQUIRED_GL_FIELDS.map(field => (
-              <FieldRow 
+            {REQUIRED_GL_FIELDS.map((field) => (
+              <FieldRow
                 key={field.key}
                 field={field}
                 value={mappings.gl[field.key] || ''}
@@ -149,12 +154,12 @@ export const StepMap: React.FC<Props> = ({ files, initialMappings, onBack, onNex
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </button>
-        
+
         <div className="flex items-center gap-4">
-           {!isComplete() && (
-             <span className="text-sm text-amber-600 font-medium">Please map all fields</span>
-           )}
-           <button
+          {!isComplete() && (
+            <span className="text-sm text-amber-600 font-medium">Please map all fields</span>
+          )}
+          <button
             onClick={() => onNext(mappings)}
             disabled={!isComplete()}
             className="group inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-xl shadow-md text-white bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed transition-all"

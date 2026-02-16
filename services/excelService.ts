@@ -35,14 +35,14 @@ export const readSpreadsheet = async (file: File): Promise<RawSpreadsheetRow[]> 
 export const parseClassificationMap = async (file: File): Promise<Record<string, string>> => {
   const rawData = await readSpreadsheet(file);
   const map: Record<string, string> = {};
-  
+
   rawData.forEach((row: RawSpreadsheetRow) => {
     // Look for columns like 'account_name' and 'default_category'
     // Be flexible with casing
     const keys = Object.keys(row);
-    const accountKey = keys.find(k => k.toLowerCase().includes('account'));
-    const categoryKey = keys.find(k => k.toLowerCase().includes('category'));
-    
+    const accountKey = keys.find((k) => k.toLowerCase().includes('account'));
+    const categoryKey = keys.find((k) => k.toLowerCase().includes('category'));
+
     if (accountKey && categoryKey) {
       const account = row[accountKey]?.toString().trim();
       const category = row[categoryKey]?.toString().trim().toUpperCase();
@@ -51,6 +51,6 @@ export const parseClassificationMap = async (file: File): Promise<Record<string,
       }
     }
   });
-  
+
   return map;
 };

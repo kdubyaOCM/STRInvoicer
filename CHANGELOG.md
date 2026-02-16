@@ -8,14 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Comprehensive documentation including README, CONTRIBUTING, TESTING, and API reference
 - Developer onboarding guide
 - Session persistence for saving and resuming work
 
 ### Changed
+
 - Initial release preparation
 
 ### Fixed
+
 - N/A
 
 ## Release Guidelines

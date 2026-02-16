@@ -18,7 +18,7 @@ enum ProcessStep {
   LOAD = 'LOAD',
   MAP = 'MAP',
   REVIEW = 'REVIEW',
-  INVOICE = 'INVOICE'
+  INVOICE = 'INVOICE',
 }
 ```
 
@@ -28,12 +28,12 @@ Represents the four steps in the invoice generation workflow.
 
 ```typescript
 enum ExpenseCategory {
-  OWNER_ONLY = 'OWNER_ONLY',          // Expense paid by owner, not reimbursed
-  MANAGER_ONLY = 'MANAGER_ONLY',      // Expense paid by manager
-  REIMBURSABLE = 'REIMBURSABLE',      // Expense to be reimbursed to owner
-  SHARED = 'SHARED',                  // Expense split between owner and manager
-  EXCLUDE = 'EXCLUDE',                // Excluded from calculations
-  REVIEW_ALWAYS = 'REVIEW_ALWAYS'     // Requires manual review
+  OWNER_ONLY = 'OWNER_ONLY', // Expense paid by owner, not reimbursed
+  MANAGER_ONLY = 'MANAGER_ONLY', // Expense paid by manager
+  REIMBURSABLE = 'REIMBURSABLE', // Expense to be reimbursed to owner
+  SHARED = 'SHARED', // Expense split between owner and manager
+  EXCLUDE = 'EXCLUDE', // Excluded from calculations
+  REVIEW_ALWAYS = 'REVIEW_ALWAYS', // Requires manual review
 }
 ```
 
@@ -43,14 +43,14 @@ Categories for classifying general ledger expenses.
 
 ```typescript
 interface ConfigState {
-  periodStart: string;           // ISO date string (YYYY-MM-DD)
-  periodEnd: string;             // ISO date string (YYYY-MM-DD)
-  managerName: string;           // Property manager's name
-  managerContact: string;        // Email or phone
-  managerBank: string;           // Bank account details for payment
-  ownerName: string;             // Property owner's name
-  mgmtFeePercent: number;        // Management fee percentage (0-100)
-  feeBaseMode: 'gross_revenue' | 'net_payouts';  // Basis for fee calculation
+  periodStart: string; // ISO date string (YYYY-MM-DD)
+  periodEnd: string; // ISO date string (YYYY-MM-DD)
+  managerName: string; // Property manager's name
+  managerContact: string; // Email or phone
+  managerBank: string; // Bank account details for payment
+  ownerName: string; // Property owner's name
+  mgmtFeePercent: number; // Management fee percentage (0-100)
+  feeBaseMode: 'gross_revenue' | 'net_payouts'; // Basis for fee calculation
 }
 ```
 
@@ -60,9 +60,9 @@ User configuration for the invoice period.
 
 ```typescript
 interface FilesState {
-  otaRaw: any[];                               // Raw OTA booking data
-  glRaw: any[];                                // Raw general ledger data
-  classificationMap: Record<string, ExpenseCategory>;  // Account -> Category mapping
+  otaRaw: any[]; // Raw OTA booking data
+  glRaw: any[]; // Raw general ledger data
+  classificationMap: Record<string, ExpenseCategory>; // Account -> Category mapping
 }
 ```
 
@@ -72,8 +72,8 @@ Stores uploaded file data before processing.
 
 ```typescript
 interface MappingState {
-  ota: Record<string, string>;  // internal field name -> CSV column header
-  gl: Record<string, string>;   // internal field name -> CSV column header
+  ota: Record<string, string>; // internal field name -> CSV column header
+  gl: Record<string, string>; // internal field name -> CSV column header
 }
 ```
 
@@ -83,16 +83,16 @@ Maps CSV/Excel column headers to internal field names.
 
 ```typescript
 interface CanonicalOtaRow {
-  id: string;                    // Generated UUID
-  reservation_id: string;        // Booking/reservation ID
-  check_in_date: string;         // ISO date (YYYY-MM-DD)
-  check_out_date?: string;       // ISO date (YYYY-MM-DD)
-  guest_name: string;            // Guest's name
-  gross_amount: number;          // Total booking amount
-  ota_fees: number;              // OTA commission/fees
-  net_payout: number;            // Amount paid out to owner
-  payout_date: string;           // Date payout was received
-  originalData: any;             // Original row data for reference
+  id: string; // Generated UUID
+  reservation_id: string; // Booking/reservation ID
+  check_in_date: string; // ISO date (YYYY-MM-DD)
+  check_out_date?: string; // ISO date (YYYY-MM-DD)
+  guest_name: string; // Guest's name
+  gross_amount: number; // Total booking amount
+  ota_fees: number; // OTA commission/fees
+  net_payout: number; // Amount paid out to owner
+  payout_date: string; // Date payout was received
+  originalData: any; // Original row data for reference
 }
 ```
 
@@ -102,26 +102,26 @@ Normalized OTA booking record.
 
 ```typescript
 interface CanonicalGlRow {
-  id: string;                    // Generated UUID
-  date: string;                  // Transaction date (YYYY-MM-DD)
-  account_name: string;          // GL account name
-  source_type: string;           // Transaction source
-  description: string;           // Transaction description
-  contact: string;               // Payee/payer
-  debit_amount: number;          // Debit amount (expenses)
-  credit_amount: number;         // Credit amount (income)
-  
+  id: string; // Generated UUID
+  date: string; // Transaction date (YYYY-MM-DD)
+  account_name: string; // GL account name
+  source_type: string; // Transaction source
+  description: string; // Transaction description
+  contact: string; // Payee/payer
+  debit_amount: number; // Debit amount (expenses)
+  credit_amount: number; // Credit amount (income)
+
   // Classification fields
-  default_category?: ExpenseCategory;   // Auto-assigned category
-  assigned_category?: ExpenseCategory;  // User-assigned category
-  split_percent?: number;               // Split percentage for SHARED (0-100)
-  include_flag: boolean;                // Whether to include in calculations
-  
+  default_category?: ExpenseCategory; // Auto-assigned category
+  assigned_category?: ExpenseCategory; // User-assigned category
+  split_percent?: number; // Split percentage for SHARED (0-100)
+  include_flag: boolean; // Whether to include in calculations
+
   // Reconciliation fields
-  is_reconciled_ota: boolean;    // If true, this income is from reconciled OTA payout
-  note?: string;                 // User notes
-  
-  originalData: any;             // Original row data
+  is_reconciled_ota: boolean; // If true, this income is from reconciled OTA payout
+  note?: string; // User notes
+
+  originalData: any; // Original row data
 }
 ```
 
@@ -131,16 +131,16 @@ Normalized general ledger transaction record.
 
 ```typescript
 interface ProcessedDataState {
-  otaBookings: CanonicalOtaRow[];        // All OTA bookings in period
-  glIncome: CanonicalGlRow[];            // Income transactions
-  glExpenses: CanonicalGlRow[];          // Expense transactions
-  reviewRows: CanonicalGlRow[];          // Items needing manual review
-  autoReimbursables: CanonicalGlRow[];   // Auto-classified reimbursables
+  otaBookings: CanonicalOtaRow[]; // All OTA bookings in period
+  glIncome: CanonicalGlRow[]; // Income transactions
+  glExpenses: CanonicalGlRow[]; // Expense transactions
+  reviewRows: CanonicalGlRow[]; // Items needing manual review
+  autoReimbursables: CanonicalGlRow[]; // Auto-classified reimbursables
   stats: {
-    totalOtaRevenue: number;             // Total gross OTA revenue
-    totalOtaNet: number;                 // Total net payouts
-    reconciledCount: number;             // Count of reconciled items
-    unreconciledCount: number;           // Count of unreconciled items
+    totalOtaRevenue: number; // Total gross OTA revenue
+    totalOtaNet: number; // Total net payouts
+    reconciledCount: number; // Count of reconciled items
+    unreconciledCount: number; // Count of unreconciled items
   };
 }
 ```
@@ -151,14 +151,14 @@ Processed and categorized data ready for review and invoice generation.
 
 ```typescript
 interface SessionState {
-  version: 1;                           // Schema version
-  savedAt: string;                      // ISO timestamp when saved
-  createdAt?: string;                   // Optional creation timestamp
-  currentStep: ProcessStep;             // Current workflow step
-  files: FilesState;                    // Uploaded file data
-  config: ConfigState;                  // User configuration
-  mappings: MappingState;               // Column mappings
-  processedData: ProcessedDataState | null;  // Processed data (if available)
+  version: 1; // Schema version
+  savedAt: string; // ISO timestamp when saved
+  createdAt?: string; // Optional creation timestamp
+  currentStep: ProcessStep; // Current workflow step
+  files: FilesState; // Uploaded file data
+  config: ConfigState; // User configuration
+  mappings: MappingState; // Column mappings
+  processedData: ProcessedDataState | null; // Processed data (if available)
 }
 ```
 
@@ -169,28 +169,23 @@ Complete application state for session persistence.
 ### generateInitialMappings
 
 ```typescript
-function generateInitialMappings(
-  otaData: any[], 
-  glData: any[]
-): MappingState
+function generateInitialMappings(otaData: any[], glData: any[]): MappingState;
 ```
 
 Generates initial column mappings by auto-detecting common field names in uploaded data.
 
 **Parameters:**
+
 - `otaData`: Array of raw OTA booking records
 - `glData`: Array of raw general ledger records
 
 **Returns:** `MappingState` with auto-detected mappings
 
 **Example:**
+
 ```typescript
-const otaData = [
-  { 'Booking ID': '123', 'Guest Name': 'John Doe', /* ... */ }
-];
-const glData = [
-  { 'Date': '2024-01-01', 'Description': 'Cleaning', /* ... */ }
-];
+const otaData = [{ 'Booking ID': '123', 'Guest Name': 'John Doe' /* ... */ }];
+const glData = [{ Date: '2024-01-01', Description: 'Cleaning' /* ... */ }];
 
 const mappings = generateInitialMappings(otaData, glData);
 // mappings.ota.reservation_id === 'Booking ID'
@@ -201,6 +196,7 @@ const mappings = generateInitialMappings(otaData, glData);
 **Auto-detection Keywords:**
 
 OTA fields:
+
 - `reservation_id`: 'reference', 'booking', 'id'
 - `check_in_date`: 'check-in', 'check in', 'start'
 - `check_out_date`: 'checkout', 'check out', 'end'
@@ -211,6 +207,7 @@ OTA fields:
 - `ota_fees`: 'commission', 'fee', 'charge'
 
 GL fields:
+
 - `date`: 'date'
 - `account_name`: 'account', 'code'
 - `description`: 'description', 'detail'
@@ -226,12 +223,13 @@ function processData(
   files: FilesState,
   config: ConfigState,
   mappings: MappingState
-): ProcessedDataState
+): ProcessedDataState;
 ```
 
 Main data processing function that normalizes, categorizes, and reconciles data.
 
 **Parameters:**
+
 - `files`: Uploaded file data
 - `config`: User configuration (dates, names, fees)
 - `mappings`: Column mappings from user
@@ -239,6 +237,7 @@ Main data processing function that normalizes, categorizes, and reconciles data.
 **Returns:** `ProcessedDataState` with processed and categorized data
 
 **Processing Steps:**
+
 1. **Normalize OTA data** - Convert to `CanonicalOtaRow[]`
 2. **Normalize GL data** - Convert to `CanonicalGlRow[]`
 3. **Filter by date range** - Only include transactions within configured period
@@ -249,22 +248,24 @@ Main data processing function that normalizes, categorizes, and reconciles data.
 8. **Calculate statistics** - Compute totals and counts
 
 **Example:**
+
 ```typescript
 const processedData = processData(files, config, mappings);
 
-console.log(processedData.stats.totalOtaRevenue);  // 10000.00
-console.log(processedData.otaBookings.length);     // 25
-console.log(processedData.glExpenses.length);      // 150
-console.log(processedData.reviewRows.length);      // 5
+console.log(processedData.stats.totalOtaRevenue); // 10000.00
+console.log(processedData.otaBookings.length); // 25
+console.log(processedData.glExpenses.length); // 150
+console.log(processedData.reviewRows.length); // 5
 ```
 
 ### Date Parsing (Internal)
 
 ```typescript
-function parseDateLoose(val: any): string | null
+function parseDateLoose(val: any): string | null;
 ```
 
 Parses various date formats including:
+
 - Excel serial dates (numeric)
 - ISO date strings
 - Common date formats
@@ -274,10 +275,11 @@ Parses various date formats including:
 ### Number Parsing (Internal)
 
 ```typescript
-function parseNumber(val: any): number
+function parseNumber(val: any): number;
 ```
 
 Parses various number formats including:
+
 - Accounting format with parentheses for negatives: `(123.45)` → `-123.45`
 - Currency symbols: `$1,234.56` → `1234.56`
 - Percentage formats
@@ -289,17 +291,19 @@ Parses various number formats including:
 ### readSpreadsheet
 
 ```typescript
-async function readSpreadsheet(file: File): Promise<any[]>
+async function readSpreadsheet(file: File): Promise<any[]>;
 ```
 
 Reads Excel (.xlsx, .xls) or CSV files and converts to JSON array.
 
 **Parameters:**
+
 - `file`: File object from input[type="file"]
 
 **Returns:** Promise resolving to array of row objects
 
 **Example:**
+
 ```typescript
 const file = event.target.files[0];
 const data = await readSpreadsheet(file);
@@ -307,23 +311,26 @@ const data = await readSpreadsheet(file);
 ```
 
 **Supported Formats:**
+
 - Excel (.xlsx, .xls)
 - CSV (.csv)
 
 ### parseClassificationMap
 
 ```typescript
-async function parseClassificationMap(file: File): Promise<Record<string, string>>
+async function parseClassificationMap(file: File): Promise<Record<string, string>>;
 ```
 
 Parses a classification mapping file that maps GL accounts to expense categories.
 
 **Parameters:**
+
 - `file`: Excel/CSV file with account and category columns
 
 **Returns:** Promise resolving to mapping object
 
 **Expected File Format:**
+
 ```csv
 Account Name,Default Category
 Cleaning,REIMBURSABLE
@@ -332,6 +339,7 @@ Repairs,OWNER_ONLY
 ```
 
 **Example:**
+
 ```typescript
 const mapFile = event.target.files[0];
 const classMap = await parseClassificationMap(mapFile);
@@ -375,7 +383,7 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   [ExpenseCategory.REIMBURSABLE]: 'Reimbursable (Charge Owner)',
   [ExpenseCategory.SHARED]: 'Shared Expense',
   [ExpenseCategory.EXCLUDE]: 'Exclude / Ignore',
-  [ExpenseCategory.REVIEW_ALWAYS]: 'Needs Review'
+  [ExpenseCategory.REVIEW_ALWAYS]: 'Needs Review',
 };
 ```
 
@@ -388,7 +396,7 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   [ExpenseCategory.REIMBURSABLE]: 'bg-green-100 text-green-800',
   [ExpenseCategory.SHARED]: 'bg-blue-100 text-blue-800',
   [ExpenseCategory.EXCLUDE]: 'bg-red-50 text-red-500',
-  [ExpenseCategory.REVIEW_ALWAYS]: 'bg-yellow-100 text-yellow-800'
+  [ExpenseCategory.REVIEW_ALWAYS]: 'bg-yellow-100 text-yellow-800',
 };
 ```
 
@@ -397,17 +405,19 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
 ### isSessionState
 
 ```typescript
-function isSessionState(value: any): value is SessionState
+function isSessionState(value: any): value is SessionState;
 ```
 
 Type guard to verify if an object conforms to the SessionState interface.
 
 **Parameters:**
+
 - `value`: Any value to check
 
 **Returns:** Boolean indicating if value is a valid SessionState
 
 **Example:**
+
 ```typescript
 const loadedData = JSON.parse(fileContent);
 if (isSessionState(loadedData)) {
@@ -436,7 +446,7 @@ const glRaw = await readSpreadsheet(glFile);
 const files: FilesState = {
   otaRaw,
   glRaw,
-  classificationMap: {}
+  classificationMap: {},
 };
 
 // 2. Generate initial mappings
@@ -451,7 +461,7 @@ const config: ConfigState = {
   managerBank: 'Account: 123456789',
   ownerName: 'John Doe',
   mgmtFeePercent: 20,
-  feeBaseMode: 'gross_revenue'
+  feeBaseMode: 'gross_revenue',
 };
 
 // 4. Process data
@@ -475,7 +485,7 @@ const session: SessionState = {
   files,
   config,
   mappings,
-  processedData
+  processedData,
 };
 
 const json = JSON.stringify(session, null, 2);
@@ -501,6 +511,7 @@ if (isSessionState(loadedSession)) {
 ### Reconciliation Logic
 
 The reconciliation process matches OTA payouts with GL income entries using:
+
 1. **Date matching** - Payout date ± 7 days
 2. **Amount matching** - Within $0.01 tolerance
 3. **Fuzzy matching** - For partial reconciliation
@@ -508,6 +519,7 @@ The reconciliation process matches OTA payouts with GL income entries using:
 ### Auto-Classification
 
 Expenses are automatically classified based on:
+
 1. **Classification map** - Pre-defined account → category mapping
 2. **Keyword detection** - Common patterns in descriptions
 3. **Account name patterns** - Recognized expense types
@@ -517,11 +529,13 @@ Items that can't be confidently classified are marked as `REVIEW_ALWAYS`.
 ### Fee Calculation Modes
 
 **Gross Revenue Mode:**
+
 ```
 Management Fee = Total OTA Gross Revenue × (mgmtFeePercent / 100)
 ```
 
 **Net Payouts Mode:**
+
 ```
 Management Fee = Total OTA Net Payouts × (mgmtFeePercent / 100)
 ```

@@ -41,17 +41,20 @@ Before you begin, ensure you have:
 ### First-Time Setup (10 minutes)
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/kdubyaOCM/STRInvoicer.git
    cd STRInvoicer
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 3. **Start the development server:**
+
    ```bash
    npm run dev
    ```
@@ -153,17 +156,17 @@ Export (Excel/PDF)
 
 ### Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **UI Framework** | React 19 | Component-based UI |
-| **Language** | TypeScript | Type safety and developer experience |
-| **Build Tool** | Vite | Fast development and optimized builds |
-| **Styling** | Tailwind CSS | Utility-first CSS framework |
-| **Date Handling** | date-fns | Date parsing and manipulation |
-| **File Processing** | xlsx (SheetJS) | Excel/CSV file parsing |
-| **Charts** | Recharts | Data visualization |
-| **Icons** | Lucide React | Icon components |
-| **ID Generation** | uuid | Unique identifier generation |
+| Layer               | Technology     | Purpose                               |
+| ------------------- | -------------- | ------------------------------------- |
+| **UI Framework**    | React 19       | Component-based UI                    |
+| **Language**        | TypeScript     | Type safety and developer experience  |
+| **Build Tool**      | Vite           | Fast development and optimized builds |
+| **Styling**         | Tailwind CSS   | Utility-first CSS framework           |
+| **Date Handling**   | date-fns       | Date parsing and manipulation         |
+| **File Processing** | xlsx (SheetJS) | Excel/CSV file parsing                |
+| **Charts**          | Recharts       | Data visualization                    |
+| **Icons**           | Lucide React   | Icon components                       |
+| **ID Generation**   | uuid           | Unique identifier generation          |
 
 ## Development Setup
 
@@ -242,6 +245,7 @@ Six categories for classifying expenses:
 ### 4. Session Persistence
 
 Users can save their work at any point as a JSON file containing:
+
 - Current step
 - Uploaded data
 - Configuration
@@ -253,6 +257,7 @@ This allows resuming complex reconciliations later.
 ### 5. Reconciliation
 
 Matching OTA payouts with GL income entries to avoid double-counting:
+
 - Date-based matching (±7 days)
 - Amount-based matching ($0.01 tolerance)
 - Manual override available
@@ -315,6 +320,7 @@ import './styles.css';
 ### Daily Workflow
 
 1. **Start your day:**
+
    ```bash
    git checkout main
    git pull origin main
@@ -322,11 +328,13 @@ import './styles.css';
    ```
 
 2. **Create a feature branch:**
+
    ```bash
    git checkout -b feature/your-feature
    ```
 
 3. **Start development server:**
+
    ```bash
    npm run dev
    ```
@@ -337,6 +345,7 @@ import './styles.css';
    - Test your changes thoroughly
 
 5. **Commit and push:**
+
    ```bash
    git add .
    git commit -m "feat: your feature description"
@@ -348,6 +357,7 @@ import './styles.css';
 ### Hot Module Replacement (HMR)
 
 Vite provides instant updates without page reload:
+
 - **Component changes** - Updates instantly
 - **Style changes** - Updates instantly
 - **Type changes** - May require manual refresh
@@ -450,6 +460,7 @@ Since automated tests aren't yet implemented, manually test:
 #### Issue: Port 5173 already in use
 
 **Solution:**
+
 ```bash
 # Kill the process using the port
 lsof -ti:5173 | xargs kill -9
@@ -461,6 +472,7 @@ npm run dev -- --port 3000
 #### Issue: Module not found errors
 
 **Solution:**
+
 ```bash
 # Clear node_modules and reinstall
 rm -rf node_modules package-lock.json
@@ -470,6 +482,7 @@ npm install
 #### Issue: TypeScript errors in editor but app runs
 
 **Solution:**
+
 - Restart TypeScript server in VS Code: `Cmd/Ctrl + Shift + P` → "TypeScript: Restart TS Server"
 - Check `tsconfig.json` is correct
 - Ensure using workspace TypeScript version
@@ -477,6 +490,7 @@ npm install
 #### Issue: Changes not reflecting in browser
 
 **Solution:**
+
 - Hard refresh: `Cmd/Ctrl + Shift + R`
 - Clear browser cache
 - Restart dev server
@@ -485,6 +499,7 @@ npm install
 #### Issue: Build fails
 
 **Solution:**
+
 ```bash
 # Check for TypeScript errors
 npx tsc --noEmit

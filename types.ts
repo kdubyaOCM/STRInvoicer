@@ -2,7 +2,7 @@ export enum ProcessStep {
   LOAD = 'LOAD',
   MAP = 'MAP',
   REVIEW = 'REVIEW',
-  INVOICE = 'INVOICE'
+  INVOICE = 'INVOICE',
 }
 
 export enum ExpenseCategory {
@@ -11,7 +11,7 @@ export enum ExpenseCategory {
   REIMBURSABLE = 'REIMBURSABLE',
   SHARED = 'SHARED',
   EXCLUDE = 'EXCLUDE',
-  REVIEW_ALWAYS = 'REVIEW_ALWAYS'
+  REVIEW_ALWAYS = 'REVIEW_ALWAYS',
 }
 
 // Type for raw spreadsheet data
@@ -62,17 +62,17 @@ export interface CanonicalGlRow {
   contact: string;
   debit_amount: number;
   credit_amount: number;
-  
+
   // Classification fields
   default_category?: ExpenseCategory;
   assigned_category?: ExpenseCategory;
   split_percent?: number; // 0-100
   include_flag: boolean;
-  
+
   // Reconciliation fields
   is_reconciled_ota: boolean; // if true, this is income we ignore because it's OTA payout
   note?: string;
-  
+
   originalData: RawSpreadsheetRow;
 }
 

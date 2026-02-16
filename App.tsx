@@ -1,17 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { StepLoad } from './components/StepLoad';
 import { StepMap } from './components/StepMap';
 import { StepReview } from './components/StepReview';
 import { StepInvoice } from './components/StepInvoice';
-import { 
-  ProcessStep, 
-  FilesState, 
-  ConfigState, 
+import {
+  ProcessStep,
+  FilesState,
+  ConfigState,
   ProcessedDataState,
   MappingState,
   SessionState,
-  isSessionState
+  isSessionState,
 } from './types';
 import { processData, generateInitialMappings } from './services/processor';
 import { Check, ChevronRight } from 'lucide-react';
@@ -25,14 +24,14 @@ const STEPS = [
 
 export default function App() {
   const [currentStep, setCurrentStep] = useState<ProcessStep>(ProcessStep.LOAD);
-  
+
   // State for all data through the pipeline
   const [files, setFiles] = useState<FilesState>({
     otaRaw: [],
     glRaw: [],
-    classificationMap: {}
+    classificationMap: {},
   });
-  
+
   const [config, setConfig] = useState<ConfigState>({
     periodStart: '',
     periodEnd: '',
@@ -41,12 +40,12 @@ export default function App() {
     managerBank: '',
     ownerName: '',
     mgmtFeePercent: 20,
-    feeBaseMode: 'gross_revenue'
+    feeBaseMode: 'gross_revenue',
   });
 
   const [mappings, setMappings] = useState<MappingState>({
     ota: {},
-    gl: {}
+    gl: {},
   });
 
   const [processedData, setProcessedData] = useState<ProcessedDataState | null>(null);
@@ -91,13 +90,15 @@ export default function App() {
       files,
       config,
       mappings,
-      processedData
+      processedData,
     };
 
     const json = JSON.stringify(session, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const safeOwner = config.ownerName ? config.ownerName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'owner';
+    const safeOwner = config.ownerName
+      ? config.ownerName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      : 'owner';
     const safePeriod = config.periodStart ? config.periodStart : 'draft';
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '');
     const filename = `str-session-${safeOwner}-${safePeriod}-${timestamp}.json`;
@@ -128,7 +129,12 @@ export default function App() {
             <div className="flex items-center gap-3">
               <div className="bg-indigo-600 text-white p-2 rounded-lg shadow-md shadow-indigo-200">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 3.667h6m-6 0V17h-6v-6.333H3M9 7v6.333H3V7h6z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 7h6m0 3.667h6m-6 0V17h-6v-6.333H3M9 7v6.333H3V7h6z"
+                  />
                 </svg>
               </div>
               <div>
@@ -136,27 +142,39 @@ export default function App() {
                 <p className="text-xs text-slate-500 font-medium">Offline Processor</p>
               </div>
             </div>
-            
+
             <nav className="hidden md:flex items-center space-x-1">
               {STEPS.map((step, idx) => {
                 const isActive = step.id === currentStep;
-                const isPast = STEPS.findIndex(s => s.id === currentStep) > idx;
+                const isPast = STEPS.findIndex((s) => s.id === currentStep) > idx;
                 const isLast = idx === STEPS.length - 1;
                 return (
                   <div key={step.id} className="flex items-center">
-                    <div className={`flex items-center px-3 py-2 rounded-full transition-all duration-300 ${
-                      isActive ? 'bg-indigo-50 ring-1 ring-indigo-200' : ''
-                    }`}>
-                      <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
-                        isActive ? 'bg-indigo-600 text-white shadow-sm' : 
-                        isPast ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-400'
-                      }`}>
+                    <div
+                      className={`flex items-center px-3 py-2 rounded-full transition-all duration-300 ${
+                        isActive ? 'bg-indigo-50 ring-1 ring-indigo-200' : ''
+                      }`}
+                    >
+                      <div
+                        className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                          isActive
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : isPast
+                              ? 'bg-green-500 text-white'
+                              : 'bg-slate-100 text-slate-400'
+                        }`}
+                      >
                         {isPast ? <Check size={14} strokeWidth={3} /> : idx + 1}
                       </div>
-                      <span className={`ml-3 text-sm font-medium transition-colors ${
-                        isActive ? 'text-indigo-900' : 
-                        isPast ? 'text-slate-700' : 'text-slate-400'
-                      }`}>
+                      <span
+                        className={`ml-3 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'text-indigo-900'
+                            : isPast
+                              ? 'text-slate-700'
+                              : 'text-slate-400'
+                        }`}
+                      >
                         {step.label}
                       </span>
                     </div>
@@ -172,9 +190,11 @@ export default function App() {
           </div>
         </div>
         <div className="md:hidden h-1 bg-slate-100 w-full">
-          <div 
+          <div
             className="h-full bg-indigo-600 transition-all duration-500 ease-out"
-            style={{ width: `${((STEPS.findIndex(s => s.id === currentStep) + 1) / STEPS.length) * 100}%` }}
+            style={{
+              width: `${((STEPS.findIndex((s) => s.id === currentStep) + 1) / STEPS.length) * 100}%`,
+            }}
           />
         </div>
       </header>
@@ -182,24 +202,24 @@ export default function App() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-5xl mx-auto">
           {currentStep === ProcessStep.LOAD && (
-            <StepLoad 
+            <StepLoad
               initialConfig={config}
-              onNext={handleFilesLoaded} 
+              onNext={handleFilesLoaded}
               onResumeSession={restoreFromSession}
             />
           )}
 
           {currentStep === ProcessStep.MAP && (
-            <StepMap 
-              files={files} 
+            <StepMap
+              files={files}
               initialMappings={mappings}
               onBack={handleBack}
-              onNext={handleMappingConfirmed} 
+              onNext={handleMappingConfirmed}
             />
           )}
 
           {currentStep === ProcessStep.REVIEW && processedData && (
-            <StepReview 
+            <StepReview
               data={processedData}
               config={config}
               onBack={handleBack}
@@ -209,7 +229,7 @@ export default function App() {
           )}
 
           {currentStep === ProcessStep.INVOICE && processedData && (
-            <StepInvoice 
+            <StepInvoice
               data={processedData}
               config={config}
               onBack={handleBack}

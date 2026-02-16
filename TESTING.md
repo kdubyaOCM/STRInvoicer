@@ -106,13 +106,13 @@ describe('Data Processor', () => {
           'Booking ID': '123',
           'Check In': '2024-01-01',
           'Guest Name': 'John Doe',
-          'Payout': 100
-        }
+          Payout: 100,
+        },
       ];
       const glData = [];
-      
+
       const mappings = generateInitialMappings(otaData, glData);
-      
+
       expect(mappings.ota.reservation_id).toBe('Booking ID');
       expect(mappings.ota.check_in_date).toBe('Check In');
     });
@@ -144,15 +144,15 @@ describe('StepLoad Component', () => {
   it('should render file upload controls', () => {
     const mockOnNext = vi.fn();
     const mockOnResume = vi.fn();
-    
+
     render(
-      <StepLoad 
-        initialConfig={{}} 
+      <StepLoad
+        initialConfig={{}}
         onNext={mockOnNext}
         onResumeSession={mockOnResume}
       />
     );
-    
+
     expect(screen.getByText(/Upload OTA Data/i)).toBeInTheDocument();
     expect(screen.getByText(/Upload GL Data/i)).toBeInTheDocument();
   });
@@ -185,12 +185,13 @@ describe('End-to-End Data Flow', () => {
 ### General Guidelines
 
 1. **Test Naming**: Use descriptive test names that explain what is being tested
+
    ```typescript
    // Good
-   it('should calculate management fee as 20% of gross revenue when feeBaseMode is gross_revenue')
-   
+   it('should calculate management fee as 20% of gross revenue when feeBaseMode is gross_revenue');
+
    // Not ideal
-   it('calculates fee')
+   it('calculates fee');
    ```
 
 2. **Test Organization**: Group related tests using `describe` blocks
@@ -216,7 +217,7 @@ describe('End-to-End Data Flow', () => {
 
 Key areas to test:
 
-1. **Date Parsing**: 
+1. **Date Parsing**:
    - Excel serial dates
    - Various date formats
    - Invalid dates
@@ -289,6 +290,7 @@ Until automated tests are implemented, use this checklist for manual testing:
 ### Cross-Browser Testing
 
 Test the application in:
+
 - [ ] Google Chrome (latest)
 - [ ] Mozilla Firefox (latest)
 - [ ] Microsoft Edge (latest)
@@ -297,6 +299,7 @@ Test the application in:
 ### Responsive Design Testing
 
 Test on different screen sizes:
+
 - [ ] Desktop (1920x1080)
 - [ ] Laptop (1366x768)
 - [ ] Tablet (768x1024)
@@ -312,6 +315,7 @@ Test on different screen sizes:
 ### Data Validation Testing
 
 Test with various data scenarios:
+
 - [ ] Multiple OTA platforms (different formats)
 - [ ] Different date formats (MM/DD/YYYY, DD/MM/YYYY, ISO)
 - [ ] Different number formats (with/without currency symbols)
