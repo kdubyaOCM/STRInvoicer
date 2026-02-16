@@ -184,12 +184,6 @@ git checkout -b fix/issue-description
 **Before committing:**
 
 ```bash
-# Run linter to check for issues
-npm run lint
-
-# Auto-fix linting issues where possible
-npm run lint:fix
-
 # Format code with Prettier
 npm run format
 
@@ -272,26 +266,23 @@ Use descriptive, lowercase branch names with hyphens:
 
 This project uses automated tools to maintain code quality and consistency:
 
-- **ESLint** - For identifying and fixing code quality issues
 - **Prettier** - For consistent code formatting
-- **TypeScript** - For type safety and better developer experience
+- **TypeScript Strict Mode** - For type safety and catching code quality issues
+- **Type Checking** - Validates all code before commits
 
-### Linting and Formatting
+### Code Formatting and Type Checking
 
 Always run these commands before committing:
 
 ```bash
-# Check for linting issues
-npm run lint
-
-# Auto-fix linting issues
-npm run lint:fix
-
 # Format all code
 npm run format
 
 # Check if code is properly formatted
 npm run format:check
+
+# Run type checking
+npm run type-check
 ```
 
 ### Type Safety

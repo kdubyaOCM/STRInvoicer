@@ -88,12 +88,6 @@ npm run preview
 To maintain code quality and consistency:
 
 ```bash
-# Run linter to check for issues
-npm run lint
-
-# Auto-fix linting issues
-npm run lint:fix
-
 # Format code with Prettier
 npm run format
 
@@ -103,6 +97,8 @@ npm run format:check
 # Type check without emitting files
 npm run type-check
 ```
+
+**Note**: This project uses TypeScript strict mode and Prettier for code quality. The strict TypeScript compiler catches most code quality issues that would typically be found by ESLint.
 
 ### Workflow
 
