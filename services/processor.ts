@@ -7,11 +7,16 @@ import {
   ExpenseCategory, 
   FilesState, 
   MappingState, 
-  ProcessedDataState 
+  ProcessedDataState,
+  RawSpreadsheetRow
 } from '../types';
 
-// Helper for loose date parsing
-const parseDateLoose = (val: any): string | null => {
+/**
+ * Parse a date value from various formats (Excel serial, string, Date object)
+ * @param val - The value to parse
+ * @returns ISO date string (YYYY-MM-DD) or null if invalid
+ */
+const parseDateLoose = (val: string | number | Date | null | undefined): string | null => {
   if (!val) return null;
   // If it's Excel serial date
   if (typeof val === 'number') {
@@ -27,7 +32,12 @@ const parseDateLoose = (val: any): string | null => {
   return null;
 };
 
-const parseNumber = (val: any): number => {
+/**
+ * Parse a numeric value from various formats (number, string, accounting format)
+ * @param val - The value to parse
+ * @returns Parsed number or 0 if invalid
+ */
+const parseNumber = (val: string | number | null | undefined): number => {
   if (typeof val === 'number') return val;
   if (!val) return 0;
   
@@ -45,14 +55,23 @@ const parseNumber = (val: any): number => {
   return isNegative ? -Math.abs(num) : num;
 };
 
-// Generate random ID
-const genId = () => Math.random().toString(36).substring(2, 9);
+/**
+ * Generate a unique identifier for records
+ * @returns A unique string identifier
+ */
+const genId = (): string => uuidv4();
 
-export const generateInitialMappings = (otaData: any[], glData: any[]): MappingState => {
+/**
+ * Generate initial column mappings by matching headers to expected field names
+ * @param otaData - Raw OTA spreadsheet data
+ * @param glData - Raw GL spreadsheet data
+ * @returns Initial mapping suggestions for OTA and GL columns
+ */
+export const generateInitialMappings = (otaData: RawSpreadsheetRow[], glData: RawSpreadsheetRow[]): MappingState => {
   const otaHeaders = otaData.length > 0 ? Object.keys(otaData[0]) : [];
   const glHeaders = glData.length > 0 ? Object.keys(glData[0]) : [];
 
-  const findMatch = (headers: string[], keywords: string[]) => {
+  const findMatch = (headers: string[], keywords: string[]): string => {
     return headers.find(h => 
       keywords.some(k => h.toLowerCase().includes(k.toLowerCase()))
     ) || '';
@@ -81,6 +100,13 @@ export const generateInitialMappings = (otaData: any[], glData: any[]): MappingS
   };
 };
 
+/**
+ * Process OTA and GL data, categorize expenses, and reconcile transactions
+ * @param files - Raw data from uploaded files
+ * @param config - User configuration including dates and fee structure
+ * @param mappings - Column mappings from user input
+ * @returns Processed data ready for review and invoice generation
+ */
 export const processData = (
   files: FilesState, 
   config: ConfigState, 

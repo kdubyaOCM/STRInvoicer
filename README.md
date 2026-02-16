@@ -77,6 +77,27 @@ To preview the production build:
 npm run preview
 ```
 
+### Code Quality & Linting
+
+To maintain code quality and consistency:
+
+```bash
+# Run linter to check for issues
+npm run lint
+
+# Auto-fix linting issues
+npm run lint:fix
+
+# Format code with Prettier
+npm run format
+
+# Check code formatting
+npm run format:check
+
+# Type check without emitting files
+npm run type-check
+```
+
 ### Workflow
 
 The STR Invoicer follows a 4-step workflow:
@@ -113,6 +134,15 @@ STR Invoicer is designed with privacy in mind:
 - **Session files are saved locally** on your device
 - You maintain complete control over your financial data
 
+### Security
+
+This application uses the `xlsx` library which has known vulnerabilities. However, the risk is minimal because:
+- All file processing occurs client-side only
+- No data is transmitted to servers
+- Users only process their own trusted files
+
+For more information, see [SECURITY.md](SECURITY.md).
+
 ## 🤝 Contributing
 
 We welcome contributions from the community! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for detailed guidelines on:
@@ -142,6 +172,7 @@ For information about running and writing tests, please refer to our [TESTING.md
 This project includes comprehensive documentation to help you get started:
 
 - **[README.md](README.md)** - Project overview, installation, and usage (you are here)
+- **[SECURITY.md](SECURITY.md)** - Security considerations and vulnerability disclosure
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and coding standards
 - **[TESTING.md](TESTING.md)** - Testing guidelines and manual testing checklist
 - **[API.md](API.md)** - API reference for types, interfaces, and functions

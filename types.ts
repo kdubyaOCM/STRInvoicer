@@ -14,6 +14,9 @@ export enum ExpenseCategory {
   REVIEW_ALWAYS = 'REVIEW_ALWAYS'
 }
 
+// Type for raw spreadsheet data
+export type RawSpreadsheetRow = Record<string, string | number | boolean | null>;
+
 export interface ConfigState {
   periodStart: string;
   periodEnd: string;
@@ -26,8 +29,8 @@ export interface ConfigState {
 }
 
 export interface FilesState {
-  otaRaw: any[];
-  glRaw: any[];
+  otaRaw: RawSpreadsheetRow[];
+  glRaw: RawSpreadsheetRow[];
   classificationMap: Record<string, ExpenseCategory>;
 }
 
@@ -47,7 +50,7 @@ export interface CanonicalOtaRow {
   ota_fees: number;
   net_payout: number;
   payout_date: string;
-  originalData: any;
+  originalData: RawSpreadsheetRow;
 }
 
 export interface CanonicalGlRow {
@@ -70,7 +73,7 @@ export interface CanonicalGlRow {
   is_reconciled_ota: boolean; // if true, this is income we ignore because it's OTA payout
   note?: string;
   
-  originalData: any;
+  originalData: RawSpreadsheetRow;
 }
 
 export interface ProcessedDataState {
@@ -99,18 +102,25 @@ export interface SessionState {
   processedData: ProcessedDataState | null;
 }
 
-export function isSessionState(value: any): value is SessionState {
+export function isSessionState(value: unknown): value is SessionState {
   return (
-    value &&
+    value !== null &&
+    value !== undefined &&
     typeof value === 'object' &&
+    'version' in value &&
     value.version === 1 &&
+    'savedAt' in value &&
     typeof value.savedAt === 'string' &&
+    'currentStep' in value &&
     typeof value.currentStep === 'string' &&
-    value.files &&
+    'files' in value &&
+    value.files !== null &&
     typeof value.files === 'object' &&
-    value.config &&
+    'config' in value &&
+    value.config !== null &&
     typeof value.config === 'object' &&
-    value.mappings &&
+    'mappings' in value &&
+    value.mappings !== null &&
     typeof value.mappings === 'object'
     // processedData can be null, so strict check might be optional, but key should exist if we want to be strict.
     // However, JS often omits keys if undefined. We'll trust the structure if main blocks exist.

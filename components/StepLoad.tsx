@@ -64,7 +64,9 @@ export const StepLoad: React.FC<Props> = ({ initialConfig, onNext, onResumeSessi
         classificationMap = await parseClassificationMap(mapFile);
       }
       onNext({ otaRaw, glRaw, classificationMap }, config);
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('File parsing error:', errorMessage);
       setError("Failed to parse files. Please ensure they are valid Excel/CSV files.");
     } finally {
       setIsLoading(false);
@@ -79,12 +81,12 @@ export const StepLoad: React.FC<Props> = ({ initialConfig, onNext, onResumeSessi
     icon: Icon, 
     required = false 
   }: { 
-    title: string, 
-    desc: string, 
-    file: File | null, 
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
-    icon: any,
-    required?: boolean
+    title: string; 
+    desc: string; 
+    file: File | null; 
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    icon: React.ComponentType<{ className?: string }>;
+    required?: boolean;
   }) => (
     <label className={`relative group border-2 border-dashed rounded-xl p-6 transition-all duration-200 cursor-pointer block ${
       file 
