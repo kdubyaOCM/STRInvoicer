@@ -137,6 +137,17 @@ We welcome contributions from the community! Please see our [CONTRIBUTING.md](CO
 
 For information about running and writing tests, please refer to our [TESTING.md](TESTING.md) documentation.
 
+## 📖 Documentation
+
+This project includes comprehensive documentation to help you get started:
+
+- **[README.md](README.md)** - Project overview, installation, and usage (you are here)
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and coding standards
+- **[TESTING.md](TESTING.md)** - Testing guidelines and manual testing checklist
+- **[API.md](API.md)** - API reference for types, interfaces, and functions
+- **[DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md)** - Comprehensive guide for new developers
+- **[CHANGELOG.md](CHANGELOG.md)** - Project version history and release notes
+
 ## 📚 Additional Resources
 
 - **View your app in AI Studio:** https://ai.studio/apps/drive/1JESjI5e9HPDtnTHMufsD7mcXbKROPfGU
