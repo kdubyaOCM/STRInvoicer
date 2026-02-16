@@ -27,8 +27,8 @@
     "noEmit": true,
     
     /* Strict Type-Checking Options */
-    "strict": false,
-    "noImplicitAny": false,
+    "strict": true,
+    "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "strictBindCallApply": true,
