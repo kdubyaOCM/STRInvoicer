@@ -1,0 +1,5 @@
+{
+  "name": "STR Invoicer App",
+  "description": "A single-property, offline browser app to generate invoices from OTA and General Ledger spreadsheets.",
+  "requestFramePermissions": []
+}
