@@ -68,7 +68,7 @@ The application includes robust support for Microsoft Excel files:
 2. **Excel Date Handling**: When uploading files with date columns, the app automatically detects and converts:
    - Excel serial dates (numeric values like 44927)
    - Standard date strings (ISO format, US format, etc.)
-   - The conversion uses the formula: `JS_Date = (Excel_Serial - 25569) * 86400 * 1000`
+   - The conversion formula calculates milliseconds since Unix epoch: `milliseconds = (Excel_Serial - 25569) * 86400 * 1000`
 
 3. **Configuration**: Set your reporting period, management fee percentage, and entity details
 
