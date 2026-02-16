@@ -175,6 +175,25 @@ git checkout -b fix/issue-description
 - Update documentation if needed
 - Test your changes thoroughly
 
+**Before committing:**
+
+```bash
+# Run linter to check for issues
+npm run lint
+
+# Auto-fix linting issues where possible
+npm run lint:fix
+
+# Format code with Prettier
+npm run format
+
+# Type check your changes
+npm run type-check
+
+# Build to ensure no compilation errors
+npm run build
+```
+
 ### 3. Commit Your Changes
 
 Write clear, descriptive commit messages:
@@ -244,6 +263,58 @@ Use descriptive, lowercase branch names with hyphens:
 - ❌ `UpdateDocs`
 
 ## Coding Standards
+
+This project uses automated tools to maintain code quality and consistency:
+
+- **ESLint** - For identifying and fixing code quality issues
+- **Prettier** - For consistent code formatting
+- **TypeScript** - For type safety and better developer experience
+
+### Linting and Formatting
+
+Always run these commands before committing:
+
+```bash
+# Check for linting issues
+npm run lint
+
+# Auto-fix linting issues
+npm run lint:fix
+
+# Format all code
+npm run format
+
+# Check if code is properly formatted
+npm run format:check
+```
+
+### Type Safety
+
+- **Avoid `any` types** - Use proper TypeScript types
+- **Use `unknown` for uncertain types** - Then narrow with type guards
+- **Define interfaces** for all data structures
+- **Add JSDoc comments** to public APIs
+- **Enable strict TypeScript settings** when possible
+
+```typescript
+// ✅ Good - Proper typing
+interface ExpenseData {
+  amount: number;
+  category: ExpenseCategory;
+  date: string;
+}
+
+function calculateTotal(expenses: ExpenseData[]): number {
+  return expenses.reduce((sum, exp) => sum + exp.amount, 0);
+}
+
+// ❌ Avoid - Using 'any'
+function calculateTotal(expenses: any): any {
+  return expenses.reduce((sum: any, exp: any) => sum + exp.amount, 0);
+}
+```
+
+### TypeScript Best Practices
 
 ### TypeScript/JavaScript
 

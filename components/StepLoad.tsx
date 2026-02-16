@@ -50,24 +50,75 @@ export const StepLoad: React.FC<Props> = ({ initialConfig, onNext, onResumeSessi
       setError("Please upload both OTA and GL files.");
       return;
     }
+    
+    // Validate file types
+    const validExtensions = ['.xlsx', '.xls', '.csv'];
+    const otaExt = otaFile.name.substring(otaFile.name.lastIndexOf('.')).toLowerCase();
+    const glExt = glFile.name.substring(glFile.name.lastIndexOf('.')).toLowerCase();
+    
+    if (!validExtensions.includes(otaExt) || !validExtensions.includes(glExt)) {
+      setError("Invalid file type. Please upload Excel (.xlsx, .xls) or CSV (.csv) files only.");
+      return;
+    }
+    
+    // Validate file sizes (max 10MB each)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (otaFile.size > maxSize || glFile.size > maxSize) {
+      setError("File size too large. Please ensure files are under 10MB.");
+      return;
+    }
+    
     if (!config.periodStart || !config.periodEnd) {
       setError("Please specify the reporting period.");
       return;
     }
+    
+    // Validate date range
+    const startDate = new Date(config.periodStart);
+    const endDate = new Date(config.periodEnd);
+    if (startDate > endDate) {
+      setError("Period start date must be before end date.");
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
     try {
       const otaRaw = await readSpreadsheet(otaFile);
       const glRaw = await readSpreadsheet(glFile);
+      
+      // Validate that files have data
+      if (otaRaw.length === 0) {
+        setError("OTA file appears to be empty. Please check your file.");
+        setIsLoading(false);
+        return;
+      }
+      if (glRaw.length === 0) {
+        setError("GL file appears to be empty. Please check your file.");
+        setIsLoading(false);
+        return;
+      }
+      
       let classificationMap = {};
       if (mapFile) {
+        const mapExt = mapFile.name.substring(mapFile.name.lastIndexOf('.')).toLowerCase();
+        if (!validExtensions.includes(mapExt)) {
+          setError("Invalid classification map file type. Please upload Excel or CSV only.");
+          setIsLoading(false);
+          return;
+        }
+        if (mapFile.size > maxSize) {
+          setError("Classification map file size too large. Please ensure file is under 10MB.");
+          setIsLoading(false);
+          return;
+        }
         classificationMap = await parseClassificationMap(mapFile);
       }
       onNext({ otaRaw, glRaw, classificationMap }, config);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error('File parsing error:', errorMessage);
-      setError("Failed to parse files. Please ensure they are valid Excel/CSV files.");
+      setError("Failed to parse files. Please ensure they are valid Excel/CSV files and contain properly formatted data.");
     } finally {
       setIsLoading(false);
     }
@@ -188,7 +239,20 @@ export const StepLoad: React.FC<Props> = ({ initialConfig, onNext, onResumeSessi
                 <div>
                    <label className="block text-xs font-medium text-slate-700 mb-1.5">Mgmt Fee %</label>
                    <div className="relative rounded-md shadow-sm">
-                      <input type="number" className="block w-full rounded-lg border-slate-200 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500" value={config.mgmtFeePercent} onChange={e => setConfig({...config, mgmtFeePercent: parseFloat(e.target.value)})} />
+                      <input 
+                        type="number" 
+                        min="0" 
+                        max="100" 
+                        step="0.1" 
+                        className="block w-full rounded-lg border-slate-200 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                        value={config.mgmtFeePercent} 
+                        onChange={e => {
+                          const value = parseFloat(e.target.value);
+                          if (!isNaN(value) && value >= 0 && value <= 100) {
+                            setConfig({...config, mgmtFeePercent: value});
+                          }
+                        }} 
+                      />
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><span className="text-slate-400 sm:text-sm">%</span></div>
                    </div>
                 </div>
