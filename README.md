@@ -35,23 +35,26 @@ Before running STR Invoicer, ensure you have:
 ## 🚀 Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/kdubyaOCM/STRInvoicer.git
    cd STRInvoicer
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables (optional):**
-   
+
    If you're deploying to AI Studio or need AI features, create a `.env.local` file in the root directory:
+
    ```bash
    GEMINI_API_KEY=your_gemini_api_key_here
    ```
-   
+
    For local offline usage, this step is optional.
 
 ## 💻 Usage
@@ -59,6 +62,7 @@ Before running STR Invoicer, ensure you have:
 ### Running Locally
 
 Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -68,50 +72,84 @@ The application will be available at `http://localhost:5173` (or another port if
 ### Building for Production
 
 To create a production build:
+
 ```bash
 npm run build
 ```
 
 To preview the production build:
+
 ```bash
 npm run preview
 ```
+
+### Code Quality & Linting
+
+To maintain code quality and consistency:
+
+```bash
+# Format code with Prettier
+npm run format
+
+# Check code formatting
+npm run format:check
+
+# Type check without emitting files
+npm run type-check
+```
+
+**Note**: This project uses TypeScript strict mode and Prettier for code quality. The strict TypeScript compiler catches most code quality issues that would typically be found by ESLint.
 
 ### Workflow
 
 The STR Invoicer follows a 4-step workflow:
 
 #### 1. **Load Data**
-   - Upload OTA booking data (CSV/Excel format)
-   - Upload general ledger expenses (CSV/Excel format)
-   - Configure period dates, manager info, and fee structure
-   - Optional: Resume from a previously saved session
+
+- Upload OTA booking data (CSV/Excel format)
+- Upload general ledger expenses (CSV/Excel format)
+- Configure period dates, manager info, and fee structure
+- Optional: Resume from a previously saved session
 
 #### 2. **Map Columns**
-   - Map your CSV columns to required fields
-   - The app auto-detects common field names
-   - Verify mappings for accurate data processing
+
+- Map your CSV columns to required fields
+- The app auto-detects common field names
+- Verify mappings for accurate data processing
 
 #### 3. **Review & Assign**
-   - Review processed bookings and expenses
-   - Classify expenses (Owner, Manager, Shared, Reimbursable)
-   - Reconcile OTA payouts with income entries
-   - Flag items requiring attention
-   - Save draft sessions for later continuation
+
+- Review processed bookings and expenses
+- Classify expenses (Owner, Manager, Shared, Reimbursable)
+- Reconcile OTA payouts with income entries
+- Flag items requiring attention
+- Save draft sessions for later continuation
 
 #### 4. **Generate Invoice**
-   - Preview the complete invoice
-   - Review revenue summary, expense breakdown, and fee calculations
-   - Export to Excel or print PDF
-   - Save session data for records
+
+- Preview the complete invoice
+- Review revenue summary, expense breakdown, and fee calculations
+- Export to Excel or print PDF
+- Save session data for records
 
 ### Data Privacy
 
 STR Invoicer is designed with privacy in mind:
+
 - **All processing happens locally** in your browser
 - **No data is sent to external servers** (except optional AI Studio features)
 - **Session files are saved locally** on your device
 - You maintain complete control over your financial data
+
+### Security
+
+This application uses the `xlsx` library which has known vulnerabilities. However, the risk is minimal because:
+
+- All file processing occurs client-side only
+- No data is transmitted to servers
+- Users only process their own trusted files
+
+For more information, see [SECURITY.md](SECURITY.md).
 
 ## 🤝 Contributing
 
@@ -142,6 +180,7 @@ For information about running and writing tests, please refer to our [TESTING.md
 This project includes comprehensive documentation to help you get started:
 
 - **[README.md](README.md)** - Project overview, installation, and usage (you are here)
+- **[SECURITY.md](SECURITY.md)** - Security considerations and vulnerability disclosure
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and coding standards
 - **[TESTING.md](TESTING.md)** - Testing guidelines and manual testing checklist
 - **[API.md](API.md)** - API reference for types, interfaces, and functions

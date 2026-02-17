@@ -59,13 +59,15 @@ When submitting a bug report, include:
 - **Environment details** (browser, OS, etc.)
 
 Example bug report:
+
 ```markdown
 **Title:** Invoice total calculation incorrect when expenses include split percentages
 
-**Description:** When an expense is marked as "Shared" with a split percentage, 
+**Description:** When an expense is marked as "Shared" with a split percentage,
 the invoice total doesn't reflect the correct split amount.
 
 **Steps to Reproduce:**
+
 1. Load OTA and GL data
 2. Map columns and proceed to review
 3. Mark an expense as "Shared" with 50% split
@@ -121,22 +123,26 @@ See the sections below for detailed information on code contributions.
 1. **Fork the repository** on GitHub
 
 2. **Clone your fork** locally:
+
    ```bash
    git clone https://github.com/YOUR-USERNAME/STRInvoicer.git
    cd STRInvoicer
    ```
 
 3. **Add upstream remote**:
+
    ```bash
    git remote add upstream https://github.com/kdubyaOCM/STRInvoicer.git
    ```
 
 4. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 5. **Start the development server**:
+
    ```bash
    npm run dev
    ```
@@ -174,6 +180,19 @@ git checkout -b fix/issue-description
 - Add comments for complex logic
 - Update documentation if needed
 - Test your changes thoroughly
+
+**Before committing:**
+
+```bash
+# Format code with Prettier
+npm run format
+
+# Type check your changes
+npm run type-check
+
+# Build to ensure no compilation errors
+npm run build
+```
 
 ### 3. Commit Your Changes
 
@@ -245,6 +264,55 @@ Use descriptive, lowercase branch names with hyphens:
 
 ## Coding Standards
 
+This project uses automated tools to maintain code quality and consistency:
+
+- **Prettier** - For consistent code formatting
+- **TypeScript Strict Mode** - For type safety and catching code quality issues
+- **Type Checking** - Validates all code before commits
+
+### Code Formatting and Type Checking
+
+Always run these commands before committing:
+
+```bash
+# Format all code
+npm run format
+
+# Check if code is properly formatted
+npm run format:check
+
+# Run type checking
+npm run type-check
+```
+
+### Type Safety
+
+- **Avoid `any` types** - Use proper TypeScript types
+- **Use `unknown` for uncertain types** - Then narrow with type guards
+- **Define interfaces** for all data structures
+- **Add JSDoc comments** to public APIs
+- **Enable strict TypeScript settings** when possible
+
+```typescript
+// ✅ Good - Proper typing
+interface ExpenseData {
+  amount: number;
+  category: ExpenseCategory;
+  date: string;
+}
+
+function calculateTotal(expenses: ExpenseData[]): number {
+  return expenses.reduce((sum, exp) => sum + exp.amount, 0);
+}
+
+// ❌ Avoid - Using 'any'
+function calculateTotal(expenses: any): any {
+  return expenses.reduce((sum: any, exp: any) => sum + exp.amount, 0);
+}
+```
+
+### TypeScript Best Practices
+
 ### TypeScript/JavaScript
 
 - **Use TypeScript** for all new code
@@ -269,7 +337,7 @@ const calculateManagementFee = (revenue: number, feePercent: number): number => 
 
 // ❌ Avoid
 const calc = (r: any, f: any) => {
-  return r * f / 100;
+  return (r * f) / 100;
 };
 ```
 
@@ -293,7 +361,7 @@ interface ExpenseRowProps {
 export const ExpenseRow: React.FC<ExpenseRowProps> = ({
   expense,
   onCategoryChange,
-  onSplitChange
+  onSplitChange,
 }) => {
   // Component implementation
 };
@@ -324,7 +392,7 @@ export const ExpenseRow: React.FC<ExpenseRowProps> = ({
 ```typescript
 /**
  * Processes OTA and GL data, categorizes expenses, and reconciles transactions.
- * 
+ *
  * @param files - Raw data from uploaded files
  * @param config - User configuration including dates and fee structure
  * @param mappings - Column mappings from user input
@@ -370,31 +438,39 @@ Use this template when creating a PR:
 
 ```markdown
 ## Description
+
 Brief description of what this PR does.
 
 ## Type of Change
+
 - [ ] Bug fix (non-breaking change that fixes an issue)
 - [ ] New feature (non-breaking change that adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to change)
 - [ ] Documentation update
 
 ## Related Issue
+
 Closes #123
 
 ## Changes Made
+
 - List specific changes
 - Be as detailed as needed
 - Include rationale for major decisions
 
 ## Testing
+
 Describe how you tested these changes:
+
 - Test case 1
 - Test case 2
 
 ## Screenshots (if applicable)
+
 Add screenshots for UI changes
 
 ## Checklist
+
 - [ ] My code follows the project's style guidelines
 - [ ] I have performed a self-review
 - [ ] I have commented complex code
@@ -403,6 +479,7 @@ Add screenshots for UI changes
 - [ ] I have tested on multiple browsers (if UI change)
 
 ## Additional Notes
+
 Any additional information reviewers should know
 ```
 

@@ -1,4 +1,4 @@
-import { ExpenseCategory } from "./types";
+import { ExpenseCategory } from './types';
 
 export const REQUIRED_OTA_FIELDS = [
   { key: 'reservation_id', label: 'Reservation / Booking ID' },
@@ -9,7 +9,7 @@ export const REQUIRED_OTA_FIELDS = [
   { key: 'gross_amount', label: 'Gross Amount' },
 ];
 
-// Optional or calculated fields we might want to map if available, 
+// Optional or calculated fields we might want to map if available,
 // but for v0.3 spec, ota_fees is derived or mapped.
 export const ALL_OTA_FIELDS = [
   ...REQUIRED_OTA_FIELDS,
@@ -31,7 +31,7 @@ export const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   [ExpenseCategory.REIMBURSABLE]: 'Reimbursable (Charge Owner)',
   [ExpenseCategory.SHARED]: 'Shared Expense',
   [ExpenseCategory.EXCLUDE]: 'Exclude / Ignore',
-  [ExpenseCategory.REVIEW_ALWAYS]: 'Needs Review'
+  [ExpenseCategory.REVIEW_ALWAYS]: 'Needs Review',
 };
 
 export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
@@ -40,5 +40,5 @@ export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   [ExpenseCategory.REIMBURSABLE]: 'bg-green-100 text-green-800',
   [ExpenseCategory.SHARED]: 'bg-blue-100 text-blue-800',
   [ExpenseCategory.EXCLUDE]: 'bg-red-50 text-red-500',
-  [ExpenseCategory.REVIEW_ALWAYS]: 'bg-yellow-100 text-yellow-800'
+  [ExpenseCategory.REVIEW_ALWAYS]: 'bg-yellow-100 text-yellow-800',
 };
