@@ -45,7 +45,7 @@ These vulnerabilities are **low risk** in this application because:
 If you discover a security vulnerability in this project:
 
 1. **Do NOT** open a public GitHub issue
-2. Email the maintainer with details about the vulnerability
+2. Use the "Report a vulnerability" option in the GitHub Security tab for this repository, or follow the contact instructions in the repository's Security Policy.
 3. Include steps to reproduce if possible
 4. Allow reasonable time for a fix before public disclosure
 
