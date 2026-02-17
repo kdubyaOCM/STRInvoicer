@@ -111,6 +111,28 @@ export const StepLoad: React.FC<Props> = ({ initialConfig, onNext, onResumeSessi
         return;
       }
 
+      // Validate that files have expected structure (headers/columns)
+      const otaFirstRow = otaRaw[0];
+      if (
+        !otaFirstRow ||
+        typeof otaFirstRow !== 'object' ||
+        Object.keys(otaFirstRow).length === 0
+      ) {
+        setError('OTA file format is not recognized. Please ensure the first row contains column headers.');
+        setIsLoading(false);
+        return;
+      }
+
+      const glFirstRow = glRaw[0];
+      if (
+        !glFirstRow ||
+        typeof glFirstRow !== 'object' ||
+        Object.keys(glFirstRow).length === 0
+      ) {
+        setError('GL file format is not recognized. Please ensure the first row contains column headers.');
+        setIsLoading(false);
+        return;
+      }
       let classificationMap = {};
       if (mapFile) {
         const mapExt = mapFile.name.substring(mapFile.name.lastIndexOf('.')).toLowerCase();
