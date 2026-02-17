@@ -15,7 +15,7 @@ export enum ExpenseCategory {
 }
 
 // Type for raw spreadsheet data
-export type RawSpreadsheetRow = Record<string, string | number | boolean | null>;
+export type RawSpreadsheetRow = Record<string, string | number | boolean | null | undefined>;
 
 export interface ConfigState {
   periodStart: string;
