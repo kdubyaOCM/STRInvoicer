@@ -30,7 +30,7 @@ These vulnerabilities are **low risk** in this application because:
 ### File Upload Security
 
 - Only Excel (.xlsx, .xls) and CSV files are accepted
-- File size limits are enforced by the browser
+- File size limited to 10MB per file
 - All file processing occurs client-side
 
 ### Data Sanitization
