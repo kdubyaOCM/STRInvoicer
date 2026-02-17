@@ -347,7 +347,12 @@ export const StepLoad: React.FC<Props> = ({ initialConfig, onNext, onResumeSessi
                   <select
                     className="block w-full rounded-lg border-slate-200 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
                     value={config.feeBaseMode}
-                    onChange={(e) => setConfig({ ...config, feeBaseMode: e.target.value as any })}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        feeBaseMode: e.target.value as 'gross_revenue' | 'net_payouts',
+                      })
+                    }
                   >
                     <option value="gross_revenue">Gross Revenue</option>
                     <option value="net_payouts">Net Payouts</option>
