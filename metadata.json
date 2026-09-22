@@ -1,5 +1,6 @@
 {
   "name": "STR Invoicer App",
   "description": "A single-property, offline browser app to generate invoices from OTA and General Ledger spreadsheets.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

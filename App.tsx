@@ -94,7 +94,8 @@ export default function App() {
     }
   };
 
-  const handleSaveSession = () => {
+  const handleSaveSession = (overrideData?: ProcessedDataState) => {
+    const dataToPersist = overrideData || processedData;
     const session: SessionState = {
       version: 1,
       savedAt: new Date().toISOString(),
@@ -102,7 +103,7 @@ export default function App() {
       files,
       config,
       mappings,
-      processedData
+      processedData: dataToPersist
     };
 
     const json = JSON.stringify(session, null, 2);
