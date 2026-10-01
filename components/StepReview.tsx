@@ -6,6 +6,9 @@ import {
   ProcessedDataState 
 } from '../types';
 import { CATEGORY_LABELS } from '../constants';
+import { buildQuarterlyLedger } from '../services/ledgerEngine';
+import { calculateSharedCents, centsToDollars, formatCents, toCents } from '../services/moneyUtils';
+import { findMatchingOtaBooking } from '../services/reconciliationService';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -13,20 +16,18 @@ import {
   TrendingUp, 
   DollarSign, 
   AlertCircle, 
-  Save,
-  Search,
-  X,
-  CheckSquare,
-  Check,
-  Layers,
-  Sparkles,
-  BarChart3,
-  PieChart as PieChartIcon,
-  ChevronDown,
-  ChevronUp,
-  Eye,
+  Search, 
+  X, 
+  CheckSquare, 
+  Check, 
+  Layers, 
+  BarChart3, 
+  PieChart as PieChartIcon, 
+  ChevronDown, 
+  ChevronUp, 
+  Eye, 
   Calendar,
-  Receipt
+  Filter
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -34,12 +35,12 @@ import {
   Cell, 
   Tooltip, 
   ResponsiveContainer, 
-  Legend,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid
+  Legend, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid 
 } from 'recharts';
 
 interface Props {
@@ -50,18 +51,19 @@ interface Props {
   onSaveDraft: (currentData?: ProcessedDataState) => void;
 }
 
-// Colors for badges and charts
 const CAT_CONFIG: Record<ExpenseCategory, { bg: string, text: string, border: string, color: string }> = {
   [ExpenseCategory.REIMBURSABLE]: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', color: '#10B981' },
   [ExpenseCategory.SHARED]: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', color: '#3B82F6' },
   [ExpenseCategory.MANAGER_ONLY]: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', color: '#8B5CF6' },
   [ExpenseCategory.OWNER_ONLY]: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', color: '#64748B' },
   [ExpenseCategory.EXCLUDE]: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', color: '#EF4444' },
-  [ExpenseCategory.REVIEW_ALWAYS]: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', color: '#F59E0B' }
+  [ExpenseCategory.REVIEW_ALWAYS]: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', color: '#F59E0B' },
+  [ExpenseCategory.INCOME]: { bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-300', color: '#059669' }
 };
 
 export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSaveDraft }) => {
   const [reviewRows, setReviewRows] = useState<CanonicalGlRow[]>(data.reviewRows);
+  const [selectedQuarterFilter, setSelectedQuarterFilter] = useState<string>('ALL');
   
   // Dedicated Toggle: Filter out any lines that have a classification assigned
   const [filterUnclassifiedOnly, setFilterUnclassifiedOnly] = useState<boolean>(false);
@@ -79,7 +81,15 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
 
   const masterCheckboxRef = useRef<HTMLInputElement>(null);
 
-  // Single row update
+  // Available Quarters from Ledger
+  const availableQuarters = useMemo(() => {
+    if (data.quarterlyLedger?.statements) {
+      return data.quarterlyLedger.statements.map(s => s.quarter);
+    }
+    return [];
+  }, [data.quarterlyLedger]);
+
+  // Single row update with deterministic nullish shared percentage
   const handleRowChange = (id: string, updates: Partial<CanonicalGlRow>) => {
     setReviewRows(prev => prev.map(row => {
       if (row.id !== id) return row;
@@ -93,12 +103,29 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
             break;
           case ExpenseCategory.SHARED:
             updated.include_flag = true;
-            updated.split_percent = updated.split_percent ?? 50;
+            updated.split_percent = updated.split_percent !== undefined ? updated.split_percent : 50;
             break;
           case ExpenseCategory.MANAGER_ONLY:
           case ExpenseCategory.OWNER_ONLY:
           case ExpenseCategory.EXCLUDE:
             updated.include_flag = false;
+            break;
+          case ExpenseCategory.INCOME:
+            updated.include_flag = true;
+            if (!updated.reconciliation_mode) {
+              const matchResult = findMatchingOtaBooking(row, data.otaBookings);
+              if (matchResult.booking) {
+                updated.reconciled_ota_id = matchResult.booking.id;
+                updated.reconciliation_mode = 'MATCHED_OTA';
+                updated.matched_booking_ref = matchResult.booking.reservation_id;
+                updated.matched_guest_name = matchResult.booking.guest_name;
+                updated.matched_amount_cents = matchResult.booking.net_payout_cents;
+                updated.note = `Reconciled to Booking #${matchResult.booking.reservation_id}`;
+              } else {
+                updated.reconciliation_mode = 'DIRECT_INCOME';
+                updated.note = 'Direct Rental Revenue';
+              }
+            }
             break;
         }
       }
@@ -121,12 +148,27 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
           break;
         case ExpenseCategory.SHARED:
           updated.include_flag = true;
-          updated.split_percent = splitPercent !== undefined ? splitPercent : (updated.split_percent ?? 50);
+          updated.split_percent = splitPercent !== undefined ? Math.min(100, Math.max(0, splitPercent)) : (updated.split_percent ?? 50);
           break;
         case ExpenseCategory.MANAGER_ONLY:
         case ExpenseCategory.OWNER_ONLY:
         case ExpenseCategory.EXCLUDE:
           updated.include_flag = false;
+          break;
+        case ExpenseCategory.INCOME:
+          updated.include_flag = true;
+          const matchResult = findMatchingOtaBooking(row, data.otaBookings);
+          if (matchResult.booking) {
+            updated.reconciled_ota_id = matchResult.booking.id;
+            updated.reconciliation_mode = 'MATCHED_OTA';
+            updated.matched_booking_ref = matchResult.booking.reservation_id;
+            updated.matched_guest_name = matchResult.booking.guest_name;
+            updated.matched_amount_cents = matchResult.booking.net_payout_cents;
+            updated.note = `Reconciled to Booking #${matchResult.booking.reservation_id}`;
+          } else {
+            updated.reconciliation_mode = 'DIRECT_INCOME';
+            updated.note = 'Direct Rental Revenue';
+          }
           break;
       }
       return updated;
@@ -141,12 +183,41 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
   };
 
   const handleNext = () => {
-    onNext({ ...data, reviewRows });
+    // Rebuild quarterly ledger with the updated reviewRows to ensure perfect mathematical consistency
+    const updatedExpenses = [
+      ...data.autoReimbursables,
+      ...reviewRows
+    ];
+
+    // Sync reviewRows classification back to glIncome in case any glIncome row was classified
+    const reviewMap = new Map<string, CanonicalGlRow>();
+    reviewRows.forEach(r => reviewMap.set(r.id, r));
+    const updatedGlIncome = data.glIncome.map(g => reviewMap.get(g.id) || g);
+
+    const updatedLedger = buildQuarterlyLedger({
+      otaBookings: data.otaBookings,
+      glIncome: updatedGlIncome,
+      glExpenses: updatedExpenses,
+      config
+    });
+
+    onNext({ 
+      ...data, 
+      glIncome: updatedGlIncome,
+      reviewRows,
+      quarterlyLedger: updatedLedger,
+      selectedQuarterId: selectedQuarterFilter !== 'ALL' ? selectedQuarterFilter : (updatedLedger.statements[0]?.quarter.id)
+    });
   };
 
   // Filter and search calculations
   const filteredRows = useMemo(() => {
     return reviewRows.filter(row => {
+      // Quarter Filter
+      if (selectedQuarterFilter !== 'ALL' && row.quarterId !== selectedQuarterFilter) {
+        return false;
+      }
+
       const isUnclassified = !row.assigned_category || row.assigned_category === ExpenseCategory.REVIEW_ALWAYS;
       
       // When toggle is ON: Filter out any lines that already have a classification assigned!
@@ -168,7 +239,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
 
       return true;
     });
-  }, [reviewRows, filterUnclassifiedOnly, searchTerm]);
+  }, [reviewRows, selectedQuarterFilter, filterUnclassifiedOnly, searchTerm]);
 
   // Overall counts
   const unassignedCount = useMemo(() => {
@@ -179,12 +250,12 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
     return reviewRows.length - unassignedCount;
   }, [reviewRows.length, unassignedCount]);
 
-  // Selected stats
-  const selectedAmount = useMemo(() => {
+  // Selected stats in integer cents
+  const selectedAmountCents = useMemo(() => {
     let sum = 0;
     reviewRows.forEach(r => {
       if (selectedIds.has(r.id)) {
-        sum += r.debit_amount;
+        sum += (r.debit_amount_cents || toCents(r.debit_amount));
       }
     });
     return sum;
@@ -199,7 +270,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
     }
   }, [filteredRows, selectedIds]);
 
-  // Toggle single row with Shift+Click support for rapid range selection
+  // Toggle single row with Shift+Click support for range selection
   const handleToggleRow = (id: string, e: React.MouseEvent) => {
     const isShift = e.shiftKey;
     setSelectedIds(prev => {
@@ -240,14 +311,12 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
   const handleToggleSelectAll = () => {
     const allFilteredSelected = filteredRows.length > 0 && filteredRows.every(r => selectedIds.has(r.id));
     if (allFilteredSelected) {
-      // Deselect all currently filtered
       setSelectedIds(prev => {
         const next = new Set(prev);
         filteredRows.forEach(r => next.delete(r.id));
         return next;
       });
     } else {
-      // Select all currently filtered
       setSelectedIds(prev => {
         const next = new Set(prev);
         filteredRows.forEach(r => next.add(r.id));
@@ -269,10 +338,10 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
     setLastSelectedId(null);
   };
 
-  // 1. RECHARTS: Expense Distribution Pie Chart Data
+  // 1. RECHARTS: Expense Distribution Pie Chart Data (Calculated in Cents)
   const expenseStats = useMemo(() => {
     const allExpenses = [...data.autoReimbursables, ...reviewRows];
-    const buckets: Record<string, number> = {
+    const bucketsCents: Record<string, number> = {
       [ExpenseCategory.REIMBURSABLE]: 0,
       [ExpenseCategory.SHARED]: 0,
       [ExpenseCategory.MANAGER_ONLY]: 0,
@@ -281,24 +350,32 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
     };
 
     allExpenses.forEach(r => {
+      if (selectedQuarterFilter !== 'ALL' && r.quarterId !== selectedQuarterFilter) return;
+
       const cat = r.assigned_category;
       if (cat === ExpenseCategory.EXCLUDE) return;
 
-      if (cat && buckets[cat] !== undefined) {
-        buckets[cat] += r.debit_amount;
+      const cents = r.debit_amount_cents || toCents(r.debit_amount);
+
+      if (cat && bucketsCents[cat] !== undefined) {
+        if (cat === ExpenseCategory.SHARED) {
+          bucketsCents[cat] += calculateSharedCents(cents, r.split_percent);
+        } else {
+          bucketsCents[cat] += cents;
+        }
       } else if (!cat || cat === ExpenseCategory.REVIEW_ALWAYS) {
-        buckets['Unassigned'] += r.debit_amount;
+        bucketsCents['Unassigned'] += cents;
       }
     });
 
-    return Object.entries(buckets)
+    return Object.entries(bucketsCents)
       .filter(([_, val]) => val > 0)
-      .map(([name, value]) => ({ 
+      .map(([name, valCents]) => ({ 
         name: CATEGORY_LABELS[name as ExpenseCategory] || name, 
-        value: Math.round(value * 100) / 100,
+        value: centsToDollars(valCents),
         color: CAT_CONFIG[name as ExpenseCategory]?.color || '#F59E0B'
       }));
-  }, [data.autoReimbursables, reviewRows]);
+  }, [data.autoReimbursables, reviewRows, selectedQuarterFilter]);
 
   const totalExpenseAmount = useMemo(() => {
     return expenseStats.reduce((sum, item) => sum + item.value, 0);
@@ -308,60 +385,29 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
     return expenseStats.find(s => s.name === CATEGORY_LABELS[ExpenseCategory.REIMBURSABLE])?.value || 0;
   }, [expenseStats]);
 
-  // 2. RECHARTS: Revenue Over Time Bar Chart Data
-  const revenueOverTime = useMemo(() => {
-    const map: Record<string, { rawDate: string, gross: number, net: number, count: number }> = {};
-    
-    // Process OTA Bookings
-    data.otaBookings.forEach(booking => {
-      const rawDate = booking.check_in_date || booking.payout_date;
-      if (!rawDate) return;
-      const key = rawDate.slice(0, 10);
-      if (!map[key]) {
-        map[key] = { rawDate: key, gross: 0, net: 0, count: 0 };
-      }
-      map[key].gross += booking.gross_amount || 0;
-      map[key].net += booking.net_payout || 0;
-      map[key].count += 1;
-    });
-
-    // Fallback: If no OTA dates exist, check GL Income credits
-    if (Object.keys(map).length === 0 && data.glIncome.length > 0) {
-      data.glIncome.forEach(inc => {
-        if (!inc.date) return;
-        const key = inc.date.slice(0, 10);
-        if (!map[key]) {
-          map[key] = { rawDate: key, gross: 0, net: 0, count: 0 };
-        }
-        map[key].gross += inc.credit_amount || 0;
-        map[key].net += inc.credit_amount || 0;
-        map[key].count += 1;
-      });
+  // 2. RECHARTS: Revenue / Quarterly Trend Bar Chart Data
+  const revenueTrendData = useMemo(() => {
+    if (data.quarterlyLedger?.statements && data.quarterlyLedger.statements.length > 0) {
+      return data.quarterlyLedger.statements.map(s => ({
+        label: s.quarter.label,
+        gross: centsToDollars(s.managementFeeBaseCents),
+        net: centsToDollars(s.rentalIncomeCents),
+        closingBalance: centsToDollars(s.closingBalanceCents)
+      }));
     }
 
-    const sorted = Object.values(map).sort((a, b) => a.rawDate.localeCompare(b.rawDate));
-
-    return sorted.map(item => {
-      let displayDate = item.rawDate;
-      try {
-        const parts = item.rawDate.split('-');
-        if (parts.length === 3) {
-          const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-          if (!isNaN(d.getTime())) {
-            displayDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-          }
-        }
-      } catch {
-        // keep fallback
-      }
-      return {
-        ...item,
-        label: displayDate,
-        gross: Math.round(item.gross * 100) / 100,
-        net: Math.round(item.net * 100) / 100
-      };
+    // Fallback: per-date summary if ledger not ready
+    const map: Record<string, { label: string, gross: number, net: number }> = {};
+    data.otaBookings.forEach(b => {
+      const d = b.payout_date || b.check_in_date;
+      if (!d) return;
+      const k = d.slice(0, 7);
+      if (!map[k]) map[k] = { label: k, gross: 0, net: 0 };
+      map[k].gross += b.gross_amount;
+      map[k].net += b.net_payout;
     });
-  }, [data.otaBookings, data.glIncome]);
+    return Object.values(map).sort((a, b) => a.label.localeCompare(b.label));
+  }, [data.quarterlyLedger, data.otaBookings]);
 
   const allFilteredSelected = filteredRows.length > 0 && filteredRows.every(r => selectedIds.has(r.id));
 
@@ -382,12 +428,12 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
           <div className="flex items-center gap-3 text-slate-500 mb-2 text-xs font-semibold uppercase tracking-wider">
              <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><DollarSign size={16}/></div>
-             Net Payout
+             Net Cash Payout
           </div>
           <div className="text-2xl font-bold text-slate-900 mt-auto">
-            ${data.stats.totalOtaNet.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            ${data.stats.totalOtaNet.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div className="text-xs text-slate-400 mt-1">Disbursed revenue from OTA</div>
+          <div className="text-xs text-slate-400 mt-1">Disbursed cash receipts from OTA</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
@@ -396,7 +442,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
              Reconciled Credits
           </div>
           <div className="text-2xl font-bold text-slate-900 mt-auto">{data.stats.reconciledCount}</div>
-          <div className="text-xs text-slate-400 mt-1">GL payouts successfully matched</div>
+          <div className="text-xs text-slate-400 mt-1">GL cash receipts matched to bookings</div>
         </div>
 
         {/* Interactive Pending Review Card (Toggles the unclassified filter on click) */}
@@ -449,12 +495,30 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Expense classification distribution and revenue over time across the statement period
+                Expense classification distribution and quarterly revenue trend across historical quarters
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-center">
+            {/* Quarter Filter Selector */}
+            {availableQuarters.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded-xl px-2.5 py-1 text-xs">
+                <Filter size={13} className="text-slate-400" />
+                <span className="text-slate-500 font-medium">Scope:</span>
+                <select
+                  value={selectedQuarterFilter}
+                  onChange={(e) => setSelectedQuarterFilter(e.target.value)}
+                  className="border-0 bg-transparent text-xs font-semibold text-slate-800 focus:ring-0 p-0 cursor-pointer"
+                >
+                  <option value="ALL">All Quarters (Cumulative)</option>
+                  {availableQuarters.map(q => (
+                    <option key={q.id} value={q.id}>{q.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <button
               onClick={() => setShowDashboard(prev => !prev)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-sm transition-colors cursor-pointer"
@@ -529,7 +593,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                     </ResponsiveContainer>
                   ) : (
                     <div className="text-center text-slate-400 text-xs py-8">
-                      No expense data available
+                      No expense data available for this scope
                     </div>
                   )}
                 </div>
@@ -550,7 +614,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
               </div>
             </div>
 
-            {/* Chart 2: Revenue Over Time (Bar Chart) - 7 Cols */}
+            {/* Chart 2: Revenue Over Time / Quarters (Bar Chart) - 7 Cols */}
             <div className="lg:col-span-7 bg-slate-50/60 rounded-2xl border border-slate-200 p-5 flex flex-col justify-between">
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
@@ -559,29 +623,29 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                       <BarChart3 size={16} />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">Revenue Over Time</h4>
-                      <p className="text-[11px] text-slate-500">Gross revenue vs net payout per booking date</p>
+                      <h4 className="text-sm font-bold text-slate-900">Quarterly Financial Trend</h4>
+                      <p className="text-[11px] text-slate-500">Gross fee base vs net cash payout received</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 text-xs">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block" />
-                      <span className="text-slate-600 font-medium">Gross: <strong>${data.stats.totalOtaRevenue.toFixed(0)}</strong></span>
+                      <span className="text-slate-600 font-medium">Gross Fee Base</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-                      <span className="text-slate-600 font-medium">Net: <strong>${data.stats.totalOtaNet.toFixed(0)}</strong></span>
+                      <span className="text-slate-600 font-medium">Net Disbursed</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Bar Chart Display */}
                 <div className="w-full h-[250px]">
-                  {revenueOverTime.length > 0 ? (
+                  {revenueTrendData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%" minHeight={220}>
                       <BarChart 
-                        data={revenueOverTime} 
+                        data={revenueTrendData} 
                         margin={{ top: 10, right: 10, left: -15, bottom: 25 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -590,7 +654,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                           stroke="#64748b" 
                           fontSize={11} 
                           tickLine={false}
-                          interval="preserveStartEnd"
+                          interval={0}
                         />
                         <YAxis 
                           stroke="#64748b" 
@@ -602,9 +666,8 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                         <Tooltip 
                           formatter={(val: number, name: string) => [
                             `$${val.toFixed(2)}`, 
-                            name === 'gross' ? 'Gross Revenue' : 'Net Payout'
+                            name === 'gross' ? 'Gross Base' : name === 'net' ? 'Net Cash' : 'Closing Balance'
                           ]}
-                          labelFormatter={(label) => `Date: ${label}`}
                           contentStyle={{ 
                             borderRadius: '10px', 
                             border: '1px solid #e2e8f0', 
@@ -621,14 +684,14 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                         />
                         <Bar 
                           dataKey="gross" 
-                          name="Gross Revenue" 
+                          name="Gross Base" 
                           fill="#6366f1" 
                           radius={[4, 4, 0, 0]} 
                           maxBarSize={32}
                         />
                         <Bar 
                           dataKey="net" 
-                          name="Net Payout" 
+                          name="Net Cash" 
                           fill="#10b981" 
                           radius={[4, 4, 0, 0]} 
                           maxBarSize={32}
@@ -638,7 +701,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs">
                       <Calendar size={24} className="mb-2 text-slate-300" />
-                      <span>No dated revenue entries recorded in the uploaded OTA file</span>
+                      <span>No quarterly revenue entries available</span>
                     </div>
                   )}
                 </div>
@@ -647,19 +710,19 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
               {/* Revenue Quick Highlights */}
               <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-200 mt-2">
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
-                  <span className="text-[10px] text-slate-500 font-semibold uppercase block">Total Net Payout</span>
+                  <span className="text-[10px] text-slate-500 font-semibold uppercase block">Total Net Cash</span>
                   <span className="text-sm font-bold text-emerald-600">${data.stats.totalOtaNet.toFixed(2)}</span>
                 </div>
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
-                  <span className="text-[10px] text-slate-500 font-semibold uppercase block">Avg Payout/Booking</span>
+                  <span className="text-[10px] text-slate-500 font-semibold uppercase block">Quarters in Range</span>
                   <span className="text-sm font-bold text-slate-800">
-                    ${data.otaBookings.length > 0 ? (data.stats.totalOtaNet / data.otaBookings.length).toFixed(2) : '0.00'}
+                    {data.quarterlyLedger?.statements.length || 0} Quarters
                   </span>
                 </div>
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
-                  <span className="text-[10px] text-slate-500 font-semibold uppercase block">OTA Fees & Comm.</span>
+                  <span className="text-[10px] text-slate-500 font-semibold uppercase block">Final Ledger Balance</span>
                   <span className="text-sm font-bold text-indigo-600">
-                    ${Math.max(0, data.stats.totalOtaRevenue - data.stats.totalOtaNet).toFixed(2)}
+                    {formatCents(data.quarterlyLedger?.finalClosingBalanceCents || 0)}
                   </span>
                 </div>
               </div>
@@ -681,7 +744,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
           </div>
           <button 
             onClick={() => setFeedbackMessage(null)}
-            className="text-emerald-600 hover:text-emerald-800 p-1 rounded-md transition-colors"
+            className="text-emerald-600 hover:text-emerald-800 p-1 rounded-md transition-colors cursor-pointer"
             title="Dismiss"
           >
             <X size={16} />
@@ -696,7 +759,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
         <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900">Review Expenses</h2>
+              <h2 className="text-base font-bold text-slate-900">Review Expenses & Allocations</h2>
               {unassignedCount > 0 ? (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                   {unassignedCount} pending classification
@@ -710,11 +773,11 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
             <p className="text-xs text-slate-500">Categorize transactions individually or select multiple with checkboxes to batch assign</p>
           </div>
 
-          {/* Filter Controls: Search & Dedicated Toggle Switch */}
+          {/* Filter Controls: Search, Quarter Filter & Dedicated Toggle Switch */}
           <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
             
             {/* Search input */}
-            <div className="relative flex-1 sm:w-56">
+            <div className="relative flex-1 sm:w-52">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input 
                 id="expense-search-input"
@@ -749,7 +812,6 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                   : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 shadow-sm'
               }`}
             >
-              {/* Physical switch mechanism */}
               <div 
                 className={`w-7 h-4 rounded-full p-0.5 flex items-center transition-colors duration-200 ${
                   filterUnclassifiedOnly ? 'bg-amber-700/60 justify-end' : 'bg-slate-300 justify-start'
@@ -795,7 +857,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
           </div>
         )}
 
-        {/* Bulk Selection Action Bar (appears when 1 or more items are selected) */}
+        {/* Bulk Selection Action Bar */}
         {selectedIds.size > 0 ? (
           <div 
             id="bulk-actions-toolbar"
@@ -807,7 +869,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                 <span>{selectedIds.size} selected</span>
                 <span className="text-indigo-500 font-normal">|</span>
                 <span className="text-indigo-700 font-medium">
-                  ${selectedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCents(selectedAmountCents)}
                 </span>
               </div>
 
@@ -865,7 +927,10 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                     max={100}
                     className="w-12 py-0.5 text-xs text-slate-900 border-0 focus:ring-0 text-center font-semibold"
                     value={bulkSplitPercent}
-                    onChange={(e) => setBulkSplitPercent(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setBulkSplitPercent(isNaN(val) ? 0 : Math.min(100, Math.max(0, val)));
+                    }}
                   />
                 </div>
               )}
@@ -884,8 +949,16 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                 Apply to {selectedIds.size}
               </button>
 
-              {/* Quick 1-click action buttons */}
               <div className="flex items-center gap-1 border-l border-indigo-200 pl-2">
+                <button
+                  id="quick-income-btn"
+                  onClick={() => handleBatchAssign(ExpenseCategory.INCOME)}
+                  title="Classify selected items as Income / Revenue (Owner Credit)"
+                  className="px-2 py-1 text-[11px] font-semibold rounded bg-emerald-700 text-white hover:bg-emerald-800 shadow-sm transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <TrendingUp size={12} />
+                  + Income / Revenue
+                </button>
                 <button
                   id="quick-reimbursable-btn"
                   onClick={() => handleBatchAssign(ExpenseCategory.REIMBURSABLE)}
@@ -906,7 +979,6 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
             </div>
           </div>
         ) : (
-          /* Sub-header helper when nothing is selected */
           <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-1.5">
               <Layers size={13} className="text-slate-400" />
@@ -943,7 +1015,7 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                   <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date & Description</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[220px]">Classification</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Notes</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Notes / Ref</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
@@ -968,12 +1040,16 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                        ) : (
                          <div>
                            <p className="text-slate-600 text-sm font-medium">No expenses match your search or filter.</p>
-                           {(searchTerm || filterUnclassifiedOnly) && (
+                           {(searchTerm || filterUnclassifiedOnly || selectedQuarterFilter !== 'ALL') && (
                              <button 
-                               onClick={() => { setSearchTerm(''); setFilterUnclassifiedOnly(false); }}
+                               onClick={() => {
+                                 setSearchTerm('');
+                                 setFilterUnclassifiedOnly(false);
+                                 setSelectedQuarterFilter('ALL');
+                               }}
                                className="mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-semibold underline cursor-pointer"
                              >
-                               Clear search and turn off filter
+                               Clear all filters
                              </button>
                            )}
                          </div>
@@ -983,94 +1059,240 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
                 ) : (
                   filteredRows.map((row) => {
                     const isSelected = selectedIds.has(row.id);
-                    const catConfig = row.assigned_category && row.assigned_category !== ExpenseCategory.REVIEW_ALWAYS 
-                      ? CAT_CONFIG[row.assigned_category] 
-                      : null;
-                      
+                    const isShared = row.assigned_category === ExpenseCategory.SHARED;
+                    const splitVal = row.split_percent !== undefined ? row.split_percent : 50;
+                    const debitCents = row.debit_amount_cents || toCents(row.debit_amount);
+                    const chargedCents = isShared ? calculateSharedCents(debitCents, splitVal) : debitCents;
+
                     return (
                       <tr 
-                        key={row.id} 
-                        id={`expense-row-${row.id}`}
-                        className={`transition-colors group ${
-                          isSelected 
-                            ? 'bg-indigo-50/70 hover:bg-indigo-100/70 border-l-2 border-indigo-600' 
-                            : 'hover:bg-slate-50'
+                        key={row.id}
+                        className={`hover:bg-slate-50/80 transition-colors ${
+                          isSelected ? 'bg-indigo-50/40' : ''
                         }`}
                       >
-                        {/* Checkbox cell */}
-                        <td className="w-12 px-3 py-4 text-center">
+                        <td className="px-3 py-3 text-center align-top">
                           <input 
-                            id={`checkbox-row-${row.id}`}
                             type="checkbox"
-                            aria-label={`Select expense ${row.description || row.account_name}`}
-                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                             checked={isSelected}
                             onClick={(e) => handleToggleRow(row.id, e)}
-                            onChange={() => {}} // Controlled via onClick with Shift support
+                            onChange={() => {}}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1"
                           />
                         </td>
-
-                        {/* Date & Description cell */}
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3 align-top">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-slate-900">{row.date}</span>
-                            {!row.assigned_category || row.assigned_category === ExpenseCategory.REVIEW_ALWAYS ? (
-                              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
-                                Pending
+                            <span className="text-xs font-mono font-semibold text-slate-500">{row.date}</span>
+                            {row.quarterId && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                                {row.quarterId.replace('FY', 'FY ')}
                               </span>
-                            ) : null}
+                            )}
                           </div>
-                          <div className="text-sm font-semibold text-slate-800 mt-0.5">{row.account_name}</div>
-                          <div className="text-xs text-slate-600 truncate max-w-[280px]" title={row.description}>{row.description}</div>
-                          {row.contact && <div className="text-xs text-slate-400 mt-0.5">{row.contact}</div>}
+                          <div className="text-sm font-medium text-slate-900 mt-0.5">{row.description}</div>
+                          <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                            <span>{row.account_name}</span>
+                            {row.contact && <span>• {row.contact}</span>}
+                          </div>
                         </td>
-
-                        {/* Amount cell */}
-                        <td className="px-4 py-4 text-right whitespace-nowrap">
-                          <div className="text-sm font-bold text-slate-900">${row.debit_amount.toFixed(2)}</div>
+                        <td className="px-4 py-3 text-right align-top">
+                          <div className={`text-sm font-bold ${
+                            row.assigned_category === ExpenseCategory.INCOME ? 'text-emerald-700' : 'text-slate-900'
+                          }`}>
+                            {row.assigned_category === ExpenseCategory.INCOME ? `+${formatCents(debitCents)}` : formatCents(debitCents)}
+                          </div>
+                          {row.assigned_category === ExpenseCategory.INCOME && (
+                            <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                              Revenue (Owner Credit)
+                            </div>
+                          )}
+                          {isShared && (
+                            <div className="text-xs text-blue-600 font-semibold mt-0.5">
+                              Owner Share: {formatCents(chargedCents)} ({splitVal}%)
+                            </div>
+                          )}
                         </td>
-
-                        {/* Classification cell */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                           <select
-                              id={`select-category-${row.id}`}
-                              className={`block w-full rounded-lg border-0 py-1.5 pl-3 pr-8 text-xs ring-1 ring-inset focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-all cursor-pointer ${
-                                catConfig 
-                                  ? `text-slate-900 ring-slate-200 font-medium ${catConfig.bg}` 
-                                  : 'text-slate-500 ring-slate-200 bg-white hover:ring-slate-300'
-                              }`}
-                              value={row.assigned_category || ''}
+                        <td className="px-4 py-3 align-top">
+                          <div className="space-y-1.5">
+                            <select
+                              value={row.assigned_category || ExpenseCategory.REVIEW_ALWAYS}
                               onChange={(e) => handleRowChange(row.id, { assigned_category: e.target.value as ExpenseCategory })}
+                              className="block w-full text-xs font-medium rounded-lg border-slate-200 py-1.5 pl-2.5 pr-8 focus:border-indigo-500 focus:ring-indigo-500 bg-white shadow-sm"
                             >
-                              <option value="">Select Category...</option>
-                              {Object.values(ExpenseCategory).filter(c => c !== ExpenseCategory.REVIEW_ALWAYS).map(cat => (
+                              {Object.values(ExpenseCategory).map(cat => (
                                 <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
                               ))}
                             </select>
 
-                            {row.assigned_category === ExpenseCategory.SHARED && (
-                              <div className="mt-2 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-                                 <span className="text-[10px] font-bold text-slate-500 uppercase">Owner %</span>
-                                 <input 
-                                    type="number" 
-                                    className="block w-16 rounded border-0 py-0.5 text-xs text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600"
-                                    value={row.split_percent ?? 50}
-                                    onChange={(e) => handleRowChange(row.id, { split_percent: parseFloat(e.target.value) })}
-                                 />
+                            {/* Income / Revenue Reconciliation Panel */}
+                            {row.assigned_category === ExpenseCategory.INCOME && (
+                              <div className="mt-2 p-2.5 rounded-xl border text-xs bg-emerald-50/80 border-emerald-300 text-emerald-950 space-y-1.5 shadow-xs">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="font-bold flex items-center gap-1.5 text-[11px] text-emerald-900">
+                                    <TrendingUp size={13} className="text-emerald-600 shrink-0" />
+                                    {row.reconciliation_mode === 'MATCHED_OTA' 
+                                      ? `Matched to Booking #${row.matched_booking_ref || ''}`
+                                      : row.reconciliation_mode === 'DUPLICATE_EXCLUDE'
+                                      ? 'Duplicate / Already Counted'
+                                      : 'Direct Guest Revenue'}
+                                  </span>
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                    row.reconciliation_mode === 'MATCHED_OTA'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : row.reconciliation_mode === 'DUPLICATE_EXCLUDE'
+                                      ? 'bg-amber-100 text-amber-900'
+                                      : 'bg-emerald-200 text-emerald-900'
+                                  }`}>
+                                    {row.reconciliation_mode === 'MATCHED_OTA' 
+                                      ? 'Reconciled (Single Count)' 
+                                      : row.reconciliation_mode === 'DUPLICATE_EXCLUDE' 
+                                      ? 'Excluded' 
+                                      : '+ Owner Credit'}
+                                  </span>
+                                </div>
+
+                                {row.reconciliation_mode === 'MATCHED_OTA' && (
+                                  <div className="text-[11px] text-slate-700 leading-tight">
+                                    Matches guest <strong>{row.matched_guest_name || 'Guest'}</strong>. Confirms banking cash receipt; linked to booking to prevent double-counting.
+                                  </div>
+                                )}
+
+                                {(!row.reconciliation_mode || row.reconciliation_mode === 'DIRECT_INCOME') && (
+                                  <div className="text-[11px] text-slate-700 leading-tight">
+                                    Recognized as independent direct rental revenue. Will be included in statement funds received as an Owner Credit.
+                                  </div>
+                                )}
+
+                                {row.reconciliation_mode === 'DUPLICATE_EXCLUDE' && (
+                                  <div className="text-[11px] text-amber-800 leading-tight">
+                                    Flagged as duplicate of revenue already recognized from earlier data load. Excluded from statement credits.
+                                  </div>
+                                )}
+
+                                 <div className="flex items-center gap-1.5 pt-1.5 border-t border-emerald-200/80 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRowChange(row.id, { 
+                                      reconciliation_mode: 'DIRECT_INCOME',
+                                      note: row.note || 'Direct Rental Revenue'
+                                    })}
+                                    className={`px-2 py-0.5 text-[10px] font-bold rounded transition-colors cursor-pointer ${
+                                      row.reconciliation_mode === 'DIRECT_INCOME' || !row.reconciliation_mode
+                                        ? 'bg-emerald-700 text-white shadow-xs'
+                                        : 'bg-white text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                                    }`}
+                                  >
+                                    Direct Revenue (+ Credit)
+                                  </button>
+
+                                  {data.otaBookings.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (row.reconciliation_mode === 'MATCHED_OTA') {
+                                          handleRowChange(row.id, { reconciliation_mode: 'DIRECT_INCOME' });
+                                        } else {
+                                          const matchResult = findMatchingOtaBooking(row, data.otaBookings);
+                                          const targetBooking = matchResult.booking || data.otaBookings[0];
+                                          handleRowChange(row.id, { 
+                                            reconciliation_mode: 'MATCHED_OTA',
+                                            reconciled_ota_id: targetBooking.id,
+                                            matched_booking_ref: targetBooking.reservation_id,
+                                            matched_guest_name: targetBooking.guest_name,
+                                            matched_amount_cents: targetBooking.net_payout_cents,
+                                            note: `Reconciled to Booking #${targetBooking.reservation_id}`
+                                          });
+                                        }
+                                      }}
+                                      className={`px-2 py-0.5 text-[10px] font-bold rounded transition-colors cursor-pointer ${
+                                        row.reconciliation_mode === 'MATCHED_OTA'
+                                          ? 'bg-blue-600 text-white shadow-xs'
+                                          : 'bg-white text-blue-800 hover:bg-blue-100 border border-blue-200'
+                                      }`}
+                                    >
+                                      {row.reconciliation_mode === 'MATCHED_OTA' ? '✓ Linked with Booking' : 'Link with Booking'}
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRowChange(row.id, { 
+                                      reconciliation_mode: row.reconciliation_mode === 'DUPLICATE_EXCLUDE' ? 'DIRECT_INCOME' : 'DUPLICATE_EXCLUDE' 
+                                    })}
+                                    className={`px-2 py-0.5 text-[10px] font-bold rounded transition-colors cursor-pointer ${
+                                      row.reconciliation_mode === 'DUPLICATE_EXCLUDE'
+                                        ? 'bg-amber-600 text-white shadow-xs'
+                                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                    }`}
+                                  >
+                                    {row.reconciliation_mode === 'DUPLICATE_EXCLUDE' ? '✓ Flagged Duplicate' : 'Flag as Duplicate'}
+                                  </button>
+                                </div>
+
+                                {/* Booking Selection Dropdown when in MATCHED_OTA mode */}
+                                {row.reconciliation_mode === 'MATCHED_OTA' && data.otaBookings.length > 0 && (
+                                  <div className="pt-1 text-[11px] flex items-center gap-1.5">
+                                    <span className="text-slate-500 font-semibold shrink-0">Linked To:</span>
+                                    <select
+                                      value={row.reconciled_ota_id || ''}
+                                      onChange={(e) => {
+                                        const chosen = data.otaBookings.find(b => b.id === e.target.value);
+                                        if (chosen) {
+                                          handleRowChange(row.id, {
+                                            reconciled_ota_id: chosen.id,
+                                            matched_booking_ref: chosen.reservation_id,
+                                            matched_guest_name: chosen.guest_name,
+                                            matched_amount_cents: chosen.net_payout_cents,
+                                            note: `Reconciled to Booking #${chosen.reservation_id}`
+                                          });
+                                        }
+                                      }}
+                                      className="w-full text-[11px] font-medium rounded border border-blue-300 py-0.5 px-1.5 bg-white text-slate-800 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                                    >
+                                      {data.otaBookings.map(b => (
+                                        <option key={b.id} value={b.id}>
+                                          #{b.reservation_id} • {b.guest_name || 'Guest'} (${(b.net_payout || 0).toFixed(2)}) • {b.payout_date || b.check_in_date}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
                               </div>
                             )}
-                        </td>
 
-                        {/* Notes cell */}
-                        <td className="px-4 py-4">
+                            {/* Split percentage with nullish safe 0% support */}
+                            {isShared && (
+                              <div className="flex items-center gap-2 bg-blue-50/70 p-1.5 rounded-lg border border-blue-200 text-xs text-blue-900">
+                                <span className="font-semibold text-[11px]">Owner %:</span>
+                                <input 
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  step={5}
+                                  className="w-14 py-0.5 text-xs text-center font-bold bg-white rounded border border-blue-300 focus:ring-1 focus:ring-blue-500"
+                                  value={splitVal}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    handleRowChange(row.id, { 
+                                      split_percent: isNaN(val) ? 0 : Math.min(100, Math.max(0, val)) 
+                                    });
+                                  }}
+                                />
+                                <span className="text-[11px] font-bold text-blue-700">
+                                  = {formatCents(chargedCents)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 align-top">
                           <input 
-                              id={`note-input-${row.id}`}
-                              type="text" 
-                              placeholder="Add note..."
-                              className="block w-full rounded border-0 py-1.5 text-xs text-slate-900 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 bg-slate-50 focus:bg-white"
-                              value={row.note || ''}
-                              onChange={(e) => handleRowChange(row.id, { note: e.target.value })}
-                           />
+                            type="text"
+                            placeholder="Add memo or note..."
+                            value={row.note || ''}
+                            onChange={(e) => handleRowChange(row.id, { note: e.target.value })}
+                            className="w-full text-xs text-slate-700 border-0 border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:ring-0 p-1 bg-transparent placeholder:text-slate-300"
+                          />
                         </td>
                       </tr>
                     );
@@ -1079,38 +1301,38 @@ export const StepReview: React.FC<Props> = ({ data, config, onBack, onNext, onSa
               </tbody>
            </table>
         </div>
+
+        {/* Footer info & pagination count */}
+        <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+          <span>
+            Showing <strong>{filteredRows.length}</strong> of <strong>{reviewRows.length}</strong> expenses
+          </span>
+          <span className="font-mono text-[11px]">
+            STR Invoicer Multi-Quarter Engine
+          </span>
+        </div>
+
       </div>
 
-      {/* Bottom Navigation Buttons */}
-      <div className="flex justify-between items-center pt-6 border-t border-slate-200">
+      {/* Navigation Buttons */}
+      <div className="flex justify-between items-center pt-4">
         <button
-          id="review-back-btn"
           onClick={onBack}
           className="inline-flex items-center px-5 py-2.5 border border-slate-300 shadow-sm text-sm font-medium rounded-xl text-slate-700 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          Back to Mapping
         </button>
-        
-        <div className="flex space-x-3">
-          <button
-            id="review-save-draft-btn"
-            onClick={() => onSaveDraft({ ...data, reviewRows })}
-            className="inline-flex items-center px-5 py-2.5 border border-slate-300 shadow-sm text-sm font-medium rounded-xl text-slate-700 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save Draft (.json)
-          </button>
-          <button
-            id="review-finalize-btn"
-            onClick={handleNext}
-            className="group inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-xl shadow-md text-white bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all cursor-pointer"
-          >
-            Finalize Invoice
-            <ArrowRight className="ml-2 -mr-1 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-          </button>
-        </div>
+
+        <button
+          onClick={handleNext}
+          className="group inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-xl shadow-md text-white bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all cursor-pointer"
+        >
+          Generate Quarterly Statements & Ledger
+          <ArrowRight className="ml-2 -mr-1 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+        </button>
       </div>
+
     </div>
   );
 };

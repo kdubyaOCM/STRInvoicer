@@ -31,7 +31,8 @@ export const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   [ExpenseCategory.REIMBURSABLE]: 'Reimbursable (Charge Owner)',
   [ExpenseCategory.SHARED]: 'Shared Expense',
   [ExpenseCategory.EXCLUDE]: 'Exclude / Ignore',
-  [ExpenseCategory.REVIEW_ALWAYS]: 'Needs Review'
+  [ExpenseCategory.REVIEW_ALWAYS]: 'Needs Review',
+  [ExpenseCategory.INCOME]: 'Income / Revenue (Owner Credit)'
 };
 
 export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
@@ -40,5 +41,6 @@ export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   [ExpenseCategory.REIMBURSABLE]: 'bg-green-100 text-green-800',
   [ExpenseCategory.SHARED]: 'bg-blue-100 text-blue-800',
   [ExpenseCategory.EXCLUDE]: 'bg-red-50 text-red-500',
-  [ExpenseCategory.REVIEW_ALWAYS]: 'bg-yellow-100 text-yellow-800'
+  [ExpenseCategory.REVIEW_ALWAYS]: 'bg-yellow-100 text-yellow-800',
+  [ExpenseCategory.INCOME]: 'bg-emerald-100 text-emerald-800'
 };

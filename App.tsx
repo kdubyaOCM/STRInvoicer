@@ -14,13 +14,14 @@ import {
   isSessionState
 } from './types';
 import { processData, generateInitialMappings } from './services/processor';
-import { Check, ChevronRight } from 'lucide-react';
+import { getActiveOwner, getManagerProfile } from './services/customerDatabase';
+import { Check, ChevronRight, User } from 'lucide-react';
 
 const STEPS = [
   { id: ProcessStep.LOAD, label: 'Load Data' },
   { id: ProcessStep.MAP, label: 'Map Columns' },
   { id: ProcessStep.REVIEW, label: 'Review & Assign' },
-  { id: ProcessStep.INVOICE, label: 'Generate Invoice' },
+  { id: ProcessStep.INVOICE, label: 'Quarterly Statements' },
 ];
 
 export default function App() {
@@ -33,15 +34,25 @@ export default function App() {
     classificationMap: {}
   });
   
-  const [config, setConfig] = useState<ConfigState>({
-    periodStart: '',
-    periodEnd: '',
-    managerName: '',
-    managerContact: '',
-    managerBank: '',
-    ownerName: '',
-    mgmtFeePercent: 20,
-    feeBaseMode: 'gross_revenue'
+  const [config, setConfig] = useState<ConfigState>(() => {
+    const owner = getActiveOwner();
+    const manager = getManagerProfile();
+    return {
+      customerId: owner.id,
+      propertyName: owner.propertyName || '',
+      ownerName: owner.name,
+      managerName: manager.managerName,
+      managerContact: manager.managerContact,
+      managerBank: manager.managerBank,
+      periodStart: '2020-07-01',
+      periodEnd: '2025-06-30',
+      mgmtFeePercent: owner.mgmtFeePercent ?? manager.defaultMgmtFeePercent,
+      feeBaseMode: owner.feeBaseMode || manager.defaultFeeBaseMode,
+      quarterMode: true,
+      startQuarterId: owner.startQuarterId || 'FY2020-21-Q1',
+      endQuarterId: owner.endQuarterId || 'FY2024-25-Q4',
+      initialOpeningBalanceCents: owner.initialOpeningBalanceCents || 0
+    };
   });
 
   const [mappings, setMappings] = useState<MappingState>({
@@ -148,6 +159,19 @@ export default function App() {
                 <p className="text-xs text-slate-500 font-medium">Offline Processor</p>
               </div>
             </div>
+
+            {config.ownerName && (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-100/90 rounded-full border border-slate-200/80 text-xs text-slate-700 shadow-xs">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-slate-400 font-medium">Active Customer:</span>
+                <span className="font-bold text-slate-900">{config.ownerName}</span>
+                {config.propertyName && (
+                  <span className="text-indigo-600 font-medium text-[11px] bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                    {config.propertyName}
+                  </span>
+                )}
+              </div>
+            )}
             
             <nav className="hidden md:flex items-center space-x-1" aria-label="Breadcrumb Stepper">
               {STEPS.map((step, idx) => {
